@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: './',
+  base: '/invoice-app/',
   plugins: [
     react(),
     tailwindcss(),
@@ -18,7 +18,7 @@ export default defineConfig({
         theme_color: '#4f46e5',
         background_color: '#0f172a',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/invoice-app/',
         icons: [
           {
             src: 'pwa-192.png',
