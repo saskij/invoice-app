@@ -4,11 +4,15 @@ import { AppProvider } from './context/AppContext';
 import { useIsMobile } from './hooks/useMediaQuery';
 import DesktopApp from './components/DesktopApp';
 import MobileApp from './components/MobileApp';
+import { useAuth } from './context/AuthContext';
 import type { Invoice } from './types';
+import { AuthPage } from './pages/AuthPage';
+import { Loader2 } from 'lucide-react';
 
 type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
 
 const AppInner: React.FC = () => {
+  const { user, loading } = useAuth();
   const [activePage, setActivePage] = useState<Page>('dashboard');
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const isMobile = useIsMobile();
@@ -22,6 +26,18 @@ const AppInner: React.FC = () => {
     setEditingInvoice(invoice);
     setActivePage('new-invoice');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
 
   return isMobile ? (
     <MobileApp

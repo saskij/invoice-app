@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { AppSettings, CatalogService } from '../../types';
-import { Save, Plus, Trash2, Briefcase, Mail, Building2, Tag } from 'lucide-react';
+import { Save, Plus, Trash2, Briefcase, Mail, Building2, Tag, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const defaultNewService: Omit<CatalogService, 'id'> = {
@@ -13,6 +14,7 @@ const defaultNewService: Omit<CatalogService, 'id'> = {
 
 const SettingsPageMobile: React.FC = () => {
     const { settings, updateSettings, catalog, addCatalogItem, updateCatalogItem, removeCatalogItem } = useApp();
+    const { signOut } = useAuth();
     const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
     const [newService, setNewService] = useState<Omit<CatalogService, 'id'>>(defaultNewService);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -295,6 +297,23 @@ const SettingsPageMobile: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* ── Account ── */}
+            <div className="glass-card animate-slide-in" style={{ padding: 20, marginTop: 16, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>Account</h2>
+                        <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>Sign out of your account on this device.</p>
+                    </div>
+                    <button
+                        className="btn-danger"
+                        onClick={() => { signOut(); toast.success('Signed out!'); }}
+                        style={{ padding: '12px 20px', gap: 10, justifyContent: 'center', width: '100%' }}
+                    >
+                        <LogOut size={16} /> Sign Out
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

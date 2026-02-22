@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useCallback } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import type { AppSettings, CatalogService, Invoice } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: AppSettings = {
     company: {
@@ -54,27 +56,147 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [settings, setSettings] = useLocalStorage<AppSettings>('invoiceapp_settings', DEFAULT_SETTINGS);
-    const [catalog, setCatalog] = useLocalStorage<CatalogService[]>('invoiceapp_catalog', DEFAULT_CATALOG);
-    const [invoices, setInvoices] = useLocalStorage<Invoice[]>('invoiceapp_invoices', []);
+    const { user } = useAuth();
+    const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+    const [catalog, setCatalog] = useState<CatalogService[]>(DEFAULT_CATALOG);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const updateSettings = useCallback((newSettings: AppSettings) => {
+    // Fetch Initial Data
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                // Fetch Settings
+                const { data: settingsData, error: settingsError } = await supabase
+                    .from('settings')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (settingsError && settingsError.code !== 'PGRST116') throw settingsError;
+                if (settingsData) {
+                    setSettings({
+                        company: settingsData.company || DEFAULT_SETTINGS.company,
+                        resend: settingsData.resend || DEFAULT_SETTINGS.resend,
+                        defaultTaxRate: settingsData.defaultTaxRate ?? DEFAULT_SETTINGS.defaultTaxRate,
+                        defaultPaymentTerms: settingsData.defaultPaymentTerms || DEFAULT_SETTINGS.defaultPaymentTerms,
+                        paymentInfo: settingsData.paymentInfo || DEFAULT_SETTINGS.paymentInfo,
+                        invoicePrefix: settingsData.invoicePrefix || DEFAULT_SETTINGS.invoicePrefix,
+                        nextInvoiceNumber: settingsData.nextInvoiceNumber || DEFAULT_SETTINGS.nextInvoiceNumber,
+                    });
+                }
+
+                // Fetch Catalog
+                const { data: catalogData, error: catalogError } = await supabase
+                    .from('catalog')
+                    .select('*')
+                    .eq('user_id', user.id);
+
+                if (catalogError) throw catalogError;
+                if (catalogData && catalogData.length > 0) {
+                    setCatalog(catalogData);
+                }
+
+                // Fetch Invoices
+                const { data: invoicesData, error: invoicesError } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('createdAt', { ascending: false });
+
+                if (invoicesError) throw invoicesError;
+                if (invoicesData) {
+                    setInvoices(invoicesData);
+                }
+            } catch (error: any) {
+                console.error('Error fetching data:', error);
+                toast.error('Failed to load data from cloud.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [user]);
+
+    const updateSettings = useCallback(async (newSettings: AppSettings) => {
+        if (!user) return;
         setSettings(newSettings);
-    }, [setSettings]);
+        try {
+            const { error } = await supabase
+                .from('settings')
+                .upsert({
+                    user_id: user.id,
+                    company: newSettings.company,
+                    resend: newSettings.resend,
+                    defaultTaxRate: newSettings.defaultTaxRate,
+                    defaultPaymentTerms: newSettings.defaultPaymentTerms,
+                    paymentInfo: newSettings.paymentInfo,
+                    invoicePrefix: newSettings.invoicePrefix,
+                    nextInvoiceNumber: newSettings.nextInvoiceNumber,
+                    updatedAt: new Date().toISOString(),
+                });
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating settings:', error);
+            toast.error('Failed to save settings.');
+        }
+    }, [user]);
 
-    const addCatalogItem = useCallback((item: Omit<CatalogService, 'id'>) => {
-        setCatalog(prev => [...prev, { ...item, id: uuidv4() }]);
-    }, [setCatalog]);
+    const addCatalogItem = useCallback(async (item: Omit<CatalogService, 'id'>) => {
+        if (!user) return;
+        const newItem = { ...item, id: uuidv4(), user_id: user.id };
+        setCatalog(prev => [...prev, newItem]);
+        try {
+            const { error } = await supabase.from('catalog').insert(newItem);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error adding catalog item:', error);
+            toast.error('Failed to add catalog item.');
+        }
+    }, [user]);
 
-    const updateCatalogItem = useCallback((item: CatalogService) => {
+    const updateCatalogItem = useCallback(async (item: CatalogService) => {
+        if (!user) return;
         setCatalog(prev => prev.map(s => s.id === item.id ? item : s));
-    }, [setCatalog]);
+        try {
+            const { error } = await supabase
+                .from('catalog')
+                .update({ ...item })
+                .eq('id', item.id)
+                .eq('user_id', user.id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating catalog item:', error);
+            toast.error('Failed to update catalog item.');
+        }
+    }, [user]);
 
-    const removeCatalogItem = useCallback((id: string) => {
+    const removeCatalogItem = useCallback(async (id: string) => {
+        if (!user) return;
         setCatalog(prev => prev.filter(s => s.id !== id));
-    }, [setCatalog]);
+        try {
+            const { error } = await supabase
+                .from('catalog')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', user.id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error removing catalog item:', error);
+            toast.error('Failed to remove catalog item.');
+        }
+    }, [user]);
 
-    const saveInvoice = useCallback((invoice: Invoice) => {
+    const saveInvoice = useCallback(async (invoice: Invoice) => {
+        if (!user) return;
+
         setInvoices(prev => {
             const idx = prev.findIndex(i => i.id === invoice.id);
             if (idx >= 0) {
@@ -84,35 +206,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
             return [invoice, ...prev];
         });
-    }, [setInvoices]);
 
-    const deleteInvoice = useCallback((id: string) => {
-        setInvoices(prev => {
-            const idx = prev.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = { ...updated[idx], status: 'deleted', updatedAt: new Date().toISOString() };
-                return updated;
-            }
-            return prev;
-        });
-    }, [setInvoices]);
+        try {
+            const { error } = await supabase
+                .from('invoices')
+                .upsert({ ...invoice, user_id: user.id, updatedAt: new Date().toISOString() });
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error saving invoice:', error);
+            toast.error('Failed to save invoice to cloud.');
+        }
+    }, [user]);
 
-    const hardDeleteInvoice = useCallback((id: string) => {
+    const deleteInvoice = useCallback(async (id: string) => {
+        if (!user) return;
+        setInvoices(prev => prev.map(i => i.id === id ? { ...i, status: 'deleted', updatedAt: new Date().toISOString() } : i));
+        try {
+            const { error } = await supabase
+                .from('invoices')
+                .update({ status: 'deleted', updatedAt: new Date().toISOString() })
+                .eq('id', id)
+                .eq('user_id', user.id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error deleting invoice:', error);
+            toast.error('Failed to delete invoice.');
+        }
+    }, [user]);
+
+    const hardDeleteInvoice = useCallback(async (id: string) => {
+        if (!user) return;
         setInvoices(prev => prev.filter(i => i.id !== id));
-    }, [setInvoices]);
+        try {
+            const { error } = await supabase
+                .from('invoices')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', user.id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error permanently deleting invoice:', error);
+            toast.error('Failed to delete invoice permanently.');
+        }
+    }, [user]);
 
-    const restoreInvoice = useCallback((id: string) => {
-        setInvoices(prev => {
-            const idx = prev.findIndex(i => i.id === id);
-            if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = { ...updated[idx], status: 'draft', updatedAt: new Date().toISOString() };
-                return updated;
-            }
-            return prev;
-        });
-    }, [setInvoices]);
+    const restoreInvoice = useCallback(async (id: string) => {
+        if (!user) return;
+        setInvoices(prev => prev.map(i => i.id === id ? { ...i, status: 'draft', updatedAt: new Date().toISOString() } : i));
+        try {
+            const { error } = await supabase
+                .from('invoices')
+                .update({ status: 'draft', updatedAt: new Date().toISOString() })
+                .eq('id', id)
+                .eq('user_id', user.id);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error restoring invoice:', error);
+            toast.error('Failed to restore invoice.');
+        }
+    }, [user]);
 
     const getNextInvoiceNumber = useCallback(() => {
         const prefix = settings.invoicePrefix || 'INV';
@@ -121,11 +273,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [settings.invoicePrefix, settings.nextInvoiceNumber]);
 
     const bumpInvoiceNumber = useCallback(() => {
-        setSettings(prev => ({
-            ...prev,
-            nextInvoiceNumber: (prev.nextInvoiceNumber || 1001) + 1,
-        }));
-    }, [setSettings]);
+        const newNextNumber = (settings.nextInvoiceNumber || 1001) + 1;
+        updateSettings({ ...settings, nextInvoiceNumber: newNextNumber });
+    }, [settings, updateSettings]);
+
+    if (loading && user) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
     return (
         <AppContext.Provider value={{
