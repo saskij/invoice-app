@@ -65,7 +65,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
             saveInvoice({ ...inv, status: 'sent', updatedAt: new Date().toISOString() });
             toast.success(`Invoice sent to ${recipientEmail}!`);
         } catch (err: any) {
-            toast.error(err.message || 'Email failed.');
+            console.error('[IL-E] handleSendEmail error:', err);
+            toast.error(err.message ? `[IL-E] ${err.message}` : '[IL-E] Email failed. Please check console.');
         } finally {
             setSending(null);
         }

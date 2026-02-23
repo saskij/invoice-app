@@ -65,7 +65,8 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
             saveInvoice({ ...inv, status: 'sent', updatedAt: new Date().toISOString() });
             toast.success(`Invoice sent to ${recipientEmail}!`);
         } catch (err: any) {
-            toast.error(err.message || 'Email failed.');
+            console.error('[IM-E] handleSendEmail error:', err);
+            toast.error(err.message ? `[IM-E] ${err.message}` : '[IM-E] Email failed. Please check console.');
         } finally {
             setSending(null);
         }

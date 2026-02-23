@@ -219,7 +219,8 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
             handleSave('sent');
             toast.success('Sent!');
         } catch (err: any) {
-            toast.error(err.message || 'Failed to send.');
+            console.error('[NM-E] handleSendEmail error:', err);
+            toast.error(err.message ? `[NM-E] ${err.message}` : '[NM-E] Failed to send. Please check console.');
         } finally {
             setSending(false);
         }
