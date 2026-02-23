@@ -60,14 +60,33 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
-    const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-    const [catalog, setCatalog] = useState<CatalogService[]>(DEFAULT_CATALOG);
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [settings, setSettings] = useState<AppSettings>(() => {
+        const saved = localStorage.getItem('invoice_app_settings');
+        return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    });
+    const [catalog, setCatalog] = useState<CatalogService[]>(() => {
+        const saved = localStorage.getItem('invoice_app_catalog');
+        return saved ? JSON.parse(saved) : DEFAULT_CATALOG;
+    });
+    const [invoices, setInvoices] = useState<Invoice[]>(() => {
+        const saved = localStorage.getItem('invoice_app_invoices');
+        return saved ? JSON.parse(saved) : [];
+    });
     const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(() => {
         const saved = localStorage.getItem('invoice_app_draft');
         return saved ? JSON.parse(saved) : null;
     });
     const [loading, setLoading] = useState(true);
+
+    // Sync invoices to localStorage
+    useEffect(() => {
+        localStorage.setItem('invoice_app_invoices', JSON.stringify(invoices));
+    }, [invoices]);
+
+    // Sync catalog to localStorage
+    useEffect(() => {
+        localStorage.setItem('invoice_app_catalog', JSON.stringify(catalog));
+    }, [catalog]);
 
     // Sync draft to localStorage
     useEffect(() => {
@@ -77,6 +96,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.removeItem('invoice_app_draft');
         }
     }, [draftInvoice]);
+
+    // Sync settings to localStorage
+    useEffect(() => {
+        localStorage.setItem('invoice_app_settings', JSON.stringify(settings));
+    }, [settings]);
 
     // Fetch Initial Data
     useEffect(() => {
