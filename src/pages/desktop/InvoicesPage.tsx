@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw } from 'lucide-react';
+import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw, Copy, DollarSign } from 'lucide-react';
 import type { Invoice } from '../../types';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -15,13 +15,15 @@ const STATUS_OPTS = ['all', 'draft', 'sent', 'paid', 'overdue', 'deleted'] as co
 
 const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
     const {
-        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, settings,
+        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, duplicateInvoice, recordPayment, settings,
         currentPage, totalCount, pageSize, fetchPage,
         searchQuery, setSearchQuery, statusFilter, setStatusFilter
     } = useApp();
     const [previewInv, setPreviewInv] = useState<Invoice | null>(null);
     const [sending, setSending] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [paymentModalId, setPaymentModalId] = useState<string | null>(null);
+    const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [localSearch, setLocalSearch] = useState(searchQuery);
 
     // Search Debouncing
@@ -104,9 +106,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'rgba(15,23,42,0.6)' }}>
-                                {['Invoice #', 'Client', 'Issue Date', 'Due Date', 'Amount', 'Status', 'Actions'].map(h => (
-                                    <th key={h} style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-                                ))}
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invoice #</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Client</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Issue Date</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Due Date</th>
+                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</th>
+                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</th>
+                                <th style={{ textAlign: 'center', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -126,9 +133,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                     <td style={{ padding: '14px 18px', fontSize: 12, color: '#94a3b8' }}>
                                         {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                                     </td>
-                                    <td style={{ padding: '14px 18px', fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{fmt(inv.total)}</td>
-                                    <td style={{ padding: '14px 18px' }}>
-                                        <span className={`badge badge-${inv.status}`}>{inv.status}</span>
+                                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#e2e8f0' }}>{fmt(inv.total)}</td>
+                                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: (inv.balanceDue || 0) > 0 ? '#f87171' : '#34d399' }}>{fmt(inv.balanceDue ?? inv.total)}</td>
+                                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                        <span className={`badge badge-${inv.displayStatus || inv.status}`}>{inv.displayStatus || inv.status}</span>
                                     </td>
                                     <td style={{ padding: '14px 18px' }}>
                                         <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
@@ -160,6 +168,18 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                                         onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(inv.id); }}
                                                         style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: '#f87171', display: 'flex' }}
                                                     ><Trash2 size={14} /></button>
+                                                    <button
+                                                        title="Duplicate"
+                                                        onClick={() => duplicateInvoice(inv)}
+                                                        style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: '#818cf8', display: 'flex' }}
+                                                    ><Copy size={14} /></button>
+                                                    {(inv.balanceDue ?? inv.total) > 0 && (
+                                                        <button
+                                                            title="Record Payment"
+                                                            onClick={() => { setPaymentModalId(inv.id); setPaymentAmount((inv.balanceDue ?? inv.total).toString()); }}
+                                                            style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: '#34d399', display: 'flex' }}
+                                                        ><DollarSign size={14} /></button>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <>
@@ -245,6 +265,34 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                 }
                                 setDeleteConfirmId(null);
                             }}>{invoices.find(i => i.id === deleteConfirmId)?.status === 'deleted' ? 'Permanently Delete' : 'Delete'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Payment Modal */}
+            {paymentModalId && (
+                <div className="modal-overlay" onClick={() => setPaymentModalId(null)}>
+                    <div className="modal-box" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ marginTop: 0, marginBottom: 16 }}>Record Payment</h3>
+                        <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>
+                            How much payment would you like to record for invoice #{invoices.find(i => i.id === paymentModalId)?.invoiceNumber}?
+                        </p>
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>Amount</label>
+                            <input
+                                type="number"
+                                className="input-field"
+                                value={paymentAmount}
+                                onChange={e => setPaymentAmount(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                            <button className="btn-secondary" onClick={() => setPaymentModalId(null)}>Cancel</button>
+                            <button className="btn-primary" onClick={async () => {
+                                await recordPayment(paymentModalId, parseFloat(paymentAmount));
+                                setPaymentModalId(null);
+                            }}>Save Payment</button>
                         </div>
                     </div>
                 </div>

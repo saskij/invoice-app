@@ -4,10 +4,11 @@ import { Menu, Plus } from 'lucide-react';
 interface MobileTopBarProps {
     activePage: string;
     onNavigate: (page: string) => void;
+    onOpenMenu: () => void;
     title: string;
 }
 
-const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, title }) => {
+const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onOpenMenu, title }) => {
     const getPageTitle = (page: string) => {
         switch (page) {
             case 'dashboard': return 'Dashboard';
@@ -21,7 +22,10 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, tit
     return (
         <header className="bg-slate-900 border-b border-white/10 px-4 py-3 sticky top-0 z-50">
             <div className="flex items-center justify-between">
-                <button className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors">
+                <button
+                    onClick={onOpenMenu}
+                    className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors"
+                >
                     <Menu className="w-6 h-6" />
                 </button>
                 <h1 className="text-lg font-semibold text-white">

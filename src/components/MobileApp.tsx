@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import MobileTopBar from './mobile/MobileTopBar';
 import MobileBottomNav from './mobile/MobileBottomNav';
+import MobileDrawer from './mobile/MobileDrawer';
 import DashboardPageMobile from '../pages/mobile/DashboardPageMobile';
 import NewInvoicePageMobile from '../pages/mobile/NewInvoicePageMobile';
 import InvoicesPageMobile from '../pages/mobile/InvoicesPageMobile';
@@ -24,11 +25,19 @@ const MobileApp: React.FC<MobileAppProps> = ({
     handleEditInvoice,
     setEditingInvoice,
 }) => {
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} className="bg-slate-950 text-slate-200">
-            <MobileTopBar activePage={activePage} onNavigate={handleNavigate} title="Invoice App" />
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-            <main style={{ flex: 1, overflowY: 'auto' }}>
+    return (
+        <div className="mobile-app-layout" style={{ minHeight: '100dvh', background: '#0f172a', paddingBottom: 80 }}>
+            <MobileTopBar
+                activePage={activePage}
+                onNavigate={handleNavigate}
+                onOpenMenu={() => setIsDrawerOpen(true)}
+                title="Invoice App"
+            />
+            <MobileDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+
+            <main style={{ padding: '0 4px' }}>
                 {activePage === 'dashboard' && <DashboardPageMobile onNavigate={handleNavigate} />}
                 {activePage === 'new-invoice' && (
                     <NewInvoicePageMobile

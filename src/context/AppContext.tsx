@@ -52,6 +52,7 @@ interface AppContextType {
     hardDeleteInvoice: (id: string) => void;
     restoreInvoice: (id: string) => void;
     reserveNextInvoiceNumber: () => Promise<string | null>;
+    duplicateInvoice: (invoice: Invoice) => void;
     uploadCompanyLogo: (file: File) => Promise<string | null>;
     draftInvoice: Partial<Invoice> | null;
     setDraftInvoice: (invoice: Partial<Invoice> | null) => void;
@@ -65,6 +66,7 @@ interface AppContextType {
     statusFilter: string;
     setStatusFilter: (s: string) => void;
     fetchPage: (page: number, search?: string, status?: string) => Promise<void>;
+    recordPayment: (invoice_id: string, amount: number, notes?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -278,29 +280,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const to = from + pageSize - 1;
 
             let query = supabase
-                .from('invoices')
+                .from('invoices_view')
                 .select('*', { count: 'exact' })
                 .eq('user_id', user.id);
 
             // Apply search
             if (currentSearch.trim()) {
                 const s = `%${currentSearch.trim()}%`;
-                query = query.or(`invoiceNumber.ilike.${s},notes.ilike.${s}`);
-                // Note: searching nested JSONB client name in standard Postgres ILIKE is tricky in one go with OR 
-                // but we can try client->>name if it was a column. Since client is JSONB:
-                // query = query.or(`invoiceNumber.ilike.${s},client->>name.ilike.${s},client->>company.ilike.${s}`);
-                // Actually Supabase or filter syntax for JSONB is: "client->>name".ilike.%...%
-                // Let's use simpler search for now (invoice number and notes) or try full or:
-                query = supabase
-                    .from('invoices')
-                    .select('*', { count: 'exact' })
-                    .eq('user_id', user.id)
-                    .or(`invoiceNumber.ilike.${s},notes.ilike.${s},client->>name.ilike.${s},client->>company.ilike.${s}`);
+                query = query.or(`invoiceNumber.ilike.${s},notes.ilike.${s},client->>name.ilike.${s},client->>company.ilike.${s}`);
             }
 
             // Apply status filter
             if (currentStatus !== 'all') {
-                query = query.eq('status', currentStatus);
+                if (currentStatus === 'overdue') {
+                    query = query.eq('displayStatus', 'overdue');
+                } else {
+                    query = query.eq('status', currentStatus);
+                }
             } else {
                 query = query.neq('status', 'deleted'); // Default to hiding trash unless explicitly filtered
             }
@@ -401,6 +397,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [user, currentPage, fetchPage]);
 
+    const duplicateInvoice = useCallback((invoice: Invoice) => {
+        const { id, invoiceNumber, createdAt, updatedAt, ...rest } = invoice;
+        const dupe: Partial<Invoice> = {
+            ...rest,
+            id: uuidv4(),
+            invoiceNumber: '', // Will be assigned on save
+            status: 'draft',
+        };
+        setDraftInvoice(dupe);
+        setActivePage('new-invoice');
+        toast.success('Invoice duplicated! Review and save.');
+    }, []);
+
+    const recordPayment = useCallback(async (invoice_id: string, amount: number, notes: string = '') => {
+        if (!user) return;
+        try {
+            const { error } = await supabase
+                .from('payment_history')
+                .insert({
+                    invoice_id,
+                    amount,
+                    notes,
+                    payment_method: 'Manual'
+                });
+
+            if (error) throw error;
+
+            toast.success('Payment recorded!');
+            await fetchPage(currentPage, searchQuery, statusFilter);
+        } catch (error) {
+            console.error('Error recording payment:', error);
+            toast.error('Failed to record payment.');
+        }
+    }, [user, fetchPage, currentPage, searchQuery, statusFilter]);
+
     const reserveNextInvoiceNumber = useCallback(async (): Promise<string | null> => {
         if (!user) return null;
         try {
@@ -464,7 +495,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             settings, updateSettings,
             catalog, addCatalogItem, updateCatalogItem, removeCatalogItem,
             invoices, saveInvoice, deleteInvoice, hardDeleteInvoice, restoreInvoice,
-            reserveNextInvoiceNumber,
+            reserveNextInvoiceNumber, duplicateInvoice, recordPayment,
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,
             activePage, setActivePage,

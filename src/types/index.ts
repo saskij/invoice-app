@@ -53,22 +53,36 @@ export interface InvoiceClient {
     zip: string;
 }
 
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'deleted';
+export interface PaymentHistory {
+    id: string;
+    invoice_id: string;
+    amount: number;
+    payment_method?: string;
+    notes?: string;
+    createdAt: string;
+}
+
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'deleted' | string;
 
 export interface Invoice {
     id: string;
+    user_id?: string;
     invoiceNumber: string;
     client: InvoiceClient;
     lineItems: LineItem[];
     issueDate: string;
     dueDate: string;
-    discountType?: 'percentage' | 'fixed';
-    discountValue?: number;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
     discountAmount?: number;
     taxRate: number;
     subtotal: number;
     taxAmount: number;
     total: number;
+    paidAmount?: number;
+    paymentDate?: string;
+    balanceDue?: number;
+    displayStatus?: InvoiceStatus;
     notes: string;
     paymentTerms: string;
     paymentInfo: string;

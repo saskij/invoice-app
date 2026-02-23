@@ -85,7 +85,7 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                                     ['Invoice Number', `#${invoice.invoiceNumber}`],
                                     ['Issue Date', fmtDate(invoice.issueDate)],
                                     ['Due Date', fmtDate(invoice.dueDate)],
-                                    ['Status', invoice.status.toUpperCase()],
+                                    ['Status', (invoice.displayStatus || invoice.status).toUpperCase()],
                                 ].map(([label, value]) => (
                                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                                         <span style={{ fontSize: 11, color: '#94a3b8' }}>{label}</span>
@@ -129,15 +129,21 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                                     { label: 'Subtotal', value: fmt(invoice.subtotal), highlight: false, show: true },
                                     { label: `Discount ${invoice.discountType === 'percentage' ? `(${invoice.discountValue}%)` : ''}`, value: `-${fmt(invoice.discountAmount || 0)}`, highlight: false, show: !!(invoice.discountAmount && invoice.discountAmount > 0) },
                                     { label: `Tax (${invoice.taxRate}%)`, value: fmt(invoice.taxAmount), highlight: false, show: true },
-                                ].filter(row => row.show).map(row => (
-                                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 16px', background: '#f1f5f9' }}>
-                                        <span style={{ fontSize: 13, color: '#475569' }}>{row.label}</span>
-                                        <span style={{ fontSize: 13, fontWeight: 600, color: row.label.startsWith('Discount') ? '#ef4444' : '#0f172a' }}>{row.value}</span>
+                                    { label: 'Total Amount', value: fmt(invoice.total), highlight: false, show: true },
+                                    { label: 'Amount Paid', value: fmt(invoice.paidAmount || 0), highlight: false, show: !!(invoice.paidAmount && invoice.paidAmount > 0) },
+                                ].filter(row => row.show).map((row, i, arr) => (
+                                    <div key={row.label} style={{
+                                        display: 'flex', justifyContent: 'space-between', padding: '10px 16px',
+                                        background: i % 2 === 0 ? '#f8fafc' : 'white',
+                                        borderBottom: i === arr.length - 1 ? 'none' : '1px solid #f1f5f9'
+                                    }}>
+                                        <span style={{ fontSize: 13, color: '#64748b' }}>{row.label}</span>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: row.label.startsWith('Discount') ? '#ef4444' : '#0f172a' }}>{row.value}</span>
                                     </div>
                                 ))}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 16px', background: '#4f46e5', borderRadius: '0 0 8px 8px' }}>
-                                    <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>TOTAL DUE</span>
-                                    <span style={{ fontSize: 16, fontWeight: 800, color: 'white' }}>{fmt(invoice.total)}</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 16px', background: '#4f46e5', borderRadius: '0 0 10px 10px', marginTop: 8, boxShadow: '0 10px 20px -5px rgba(79, 70, 229, 0.4)' }}>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>BALANCE DUE</span>
+                                    <span style={{ fontSize: 18, fontWeight: 900, color: 'white' }}>{fmt(invoice.balanceDue ?? invoice.total)}</span>
                                 </div>
                             </div>
                         </div>
