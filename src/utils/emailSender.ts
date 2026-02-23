@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react";
 import { supabase } from '../lib/supabaseClient';
 import type { Invoice, CompanyInfo } from '../types';
 
@@ -44,18 +43,41 @@ export async function sendInvoiceEmail({
         filename: `Invoice-${invoice.invoiceNumber}.pdf`
     };
 
-    console.log('Invoking Edge Function send-invoice with payload:', { ...payload, pdfBase64: payload.pdfBase64 ? '(base64 string)' : 'none' });
-    const { data, error } = await supabase.functions.invoke('send-invoice', {
-        body: payload
-    });
+    console.log('[ES] Sending email via direct fetch to Edge Function...');
 
-    if (error) {
-        console.error('[ES] Supabase invoke error:', error);
-        throw new Error(error.message || 'Supabase Function invocation failed (Check internet/connection)');
+    // Get the session to get the JWT
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+        throw new Error('Not authenticated. Please log in again.');
     }
 
-    if (data?.error) {
-        console.error('[ES] Edge Function logic error:', data.error);
-        throw new Error(data.error);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pgqawzeejmgbwfrirtvw.supabase.co';
+    const functionUrl = `${supabaseUrl}/functions/v1/send-invoice`;
+
+    try {
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Z6n7RNbiclvtK4fpx8T7aw_gkgoJ0Ej'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || (result && result.error)) {
+            const errorMsg = result?.error || result?.message || `HTTP ${response.status}: Failed to send email`;
+            console.error('[ES] Fetch error:', { status: response.status, result });
+            throw new Error(errorMsg);
+        }
+
+        console.log('[ES] Email sent successfully:', result);
+    } catch (err: any) {
+        console.error('[ES] Network or Logic error:', err);
+        throw err;
     }
 }
