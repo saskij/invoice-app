@@ -22,14 +22,25 @@ export const AuthPage: React.FC = () => {
                 if (error) throw error;
                 toast.success('Successfully logged in!');
             } else {
-                const { error } = await supabase.auth.signUp({
+                const { error, data } = await supabase.auth.signUp({
                     email,
                     password,
                 });
-                if (error) throw error;
-                toast.success('Registration successful! Please check your email for confirmation.');
+                if (error) {
+                    if (error.message.includes('Database error saving new user')) {
+                        throw new Error('Database error during registration. Please ensure the SQL fix has been applied in Supabase.');
+                    }
+                    throw error;
+                }
+
+                if (data?.user && data?.session === null) {
+                    toast.success('Registration successful! Please check your email for confirmation.');
+                } else if (data?.user) {
+                    toast.success('Registration successful!');
+                }
             }
         } catch (error: any) {
+            console.error('Auth Error:', error);
             toast.error(error.message || 'An error occurred during authentication');
         } finally {
             setLoading(false);

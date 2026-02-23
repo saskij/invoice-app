@@ -41,7 +41,7 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
         if (!settings.resend.apiKey) { toast.error('Configure Resend API Key in Settings first.'); return; }
         setSending(inv.id);
         try {
-            const pdfBase64 = getInvoicePDFBase64(inv, settings.company);
+            const pdfBase64 = await getInvoicePDFBase64(inv, settings.company);
             await sendInvoiceEmail({
                 config: settings.resend,
                 invoice: inv,
@@ -127,7 +127,7 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                                             <button title="Preview" onClick={() => setPreviewInv(inv)} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#818cf8' }}>
                                                 <Eye size={16} />
                                             </button>
-                                            <button title="Download PDF" onClick={() => { downloadInvoicePDF(inv, settings.company); toast.success('PDF downloaded!'); }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#818cf8' }}>
+                                            <button title="Download PDF" onClick={async () => { await downloadInvoicePDF(inv, settings.company); toast.success('PDF downloaded!'); }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#818cf8' }}>
                                                 <Download size={16} />
                                             </button>
                                             <button title="Send Email" onClick={() => handleSendEmail(inv)} disabled={sending === inv.id} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#34d399', opacity: sending === inv.id ? 0.5 : 1 }}>
@@ -168,7 +168,7 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                     invoice={previewInv}
                     company={settings.company}
                     onClose={() => setPreviewInv(null)}
-                    onDownload={() => { downloadInvoicePDF(previewInv, settings.company); toast.success('PDF downloaded!'); }}
+                    onDownload={async () => { await downloadInvoicePDF(previewInv, settings.company); toast.success('PDF downloaded!'); }}
                 />
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { Invoice, LineItem, InvoiceClient } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +16,7 @@ interface NewInvoicePageMobileProps {
 const emptyClient: InvoiceClient = { name: '', email: '', company: '', address: '', city: '', state: '', zip: '' };
 
 const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber } = useApp();
+    const { settings, catalog, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, setDraftInvoice } = useApp();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -106,22 +106,32 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
         updatedAt: new Date().toISOString(),
     });
 
+    // Sync draft to context
+    useEffect(() => {
+        setDraftInvoice(buildInvoice());
+    }, [
+        invoiceId, invoiceNumber, client, lineItems, issueDate, dueDate,
+        discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, status,
+        setDraftInvoice
+    ]);
+
     const handleSave = (newStatus: Invoice['status'] = status) => {
         if (!client.name.trim()) { toast.error('Client name is required.'); return; }
         if (lineItems.length === 0) { toast.error('Add at least one line item.'); return; }
         const inv = { ...buildInvoice(), status: newStatus };
         saveInvoice(inv);
         if (!editInvoice) bumpInvoiceNumber();
+        setDraftInvoice(null);
         toast.success(`Invoice ${newStatus === 'draft' ? 'saved as draft' : 'saved'}!`);
         onSaved?.();
     };
 
-    const handleDownloadPDF = () => {
+    const handleDownloadPDF = async () => {
         if (!client.name.trim() || lineItems.length === 0) {
             toast.error('Please fill in client info and add line items first.');
             return;
         }
-        downloadInvoicePDF(buildInvoice(), settings.company);
+        await downloadInvoicePDF(buildInvoice(), settings.company);
         toast.success('PDF downloaded!');
     };
 
@@ -130,7 +140,7 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
         if (!settings.resend.apiKey.trim()) { toast.error('Configure Resend API Key in Settings first.'); return; }
         setSending(true);
         try {
-            const pdfBase64 = getInvoicePDFBase64(buildInvoice(), settings.company);
+            const pdfBase64 = await getInvoicePDFBase64(buildInvoice(), settings.company);
             await sendInvoiceEmail({
                 config: settings.resend,
                 invoice: buildInvoice(),

@@ -16,7 +16,7 @@ function formatDate(dateStr: string): string {
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
 }
 
-export function generateInvoicePDF(invoice: Invoice, company: CompanyInfo): jsPDF {
+export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo): Promise<jsPDF> {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 48;
@@ -32,21 +32,41 @@ export function generateInvoicePDF(invoice: Invoice, company: CompanyInfo): jsPD
     doc.rect(0, 118, pageWidth, 4, 'F');
 
     let textStartX = margin;
+    const logoUrl = company.logoUrl;
 
-    if (company.logoUrl && company.logoUrl.startsWith('data:image')) {
+    if (logoUrl) {
         try {
-            const imgProps = doc.getImageProperties(company.logoUrl);
-            const maxLogoHeight = 56;
-            let logoWidth = (imgProps.width * maxLogoHeight) / imgProps.height;
-            let logoHeight = maxLogoHeight;
+            let imgData = logoUrl;
+            let fileType = 'PNG';
 
-            if (logoWidth > 140) {
-                logoWidth = 140;
-                logoHeight = (imgProps.height * logoWidth) / imgProps.width;
+            // If it's a remote URL, we need to fetch it (best effort)
+            if (logoUrl.startsWith('http')) {
+                const response = await fetch(logoUrl);
+                const blob = await response.blob();
+                imgData = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                });
+                fileType = logoUrl.split('.').pop()?.toUpperCase() || 'PNG';
+            } else if (logoUrl.startsWith('data:image')) {
+                fileType = logoUrl.split(';')[0].split('/')[1].toUpperCase();
             }
 
-            doc.addImage(company.logoUrl, imgProps.fileType, margin, 34 + (maxLogoHeight - logoHeight) / 2, logoWidth, logoHeight);
-            textStartX = margin + logoWidth + 20;
+            if (imgData.startsWith('data:image')) {
+                const imgProps = doc.getImageProperties(imgData);
+                const maxLogoHeight = 56;
+                let logoWidth = (imgProps.width * maxLogoHeight) / imgProps.height;
+                let logoHeight = maxLogoHeight;
+
+                if (logoWidth > 140) {
+                    logoWidth = 140;
+                    logoHeight = (imgProps.height * logoWidth) / imgProps.width;
+                }
+
+                doc.addImage(imgData, fileType === 'JPG' ? 'JPEG' : fileType, margin, 34 + (maxLogoHeight - logoHeight) / 2, logoWidth, logoHeight);
+                textStartX = margin + logoWidth + 20;
+            }
         } catch (e) {
             console.error('Logo render error:', e);
         }
@@ -262,17 +282,17 @@ export function generateInvoicePDF(invoice: Invoice, company: CompanyInfo): jsPD
     return doc;
 }
 
-export function downloadInvoicePDF(invoice: Invoice, company: CompanyInfo): void {
-    const doc = generateInvoicePDF(invoice, company);
+export async function downloadInvoicePDF(invoice: Invoice, company: CompanyInfo): Promise<void> {
+    const doc = await generateInvoicePDF(invoice, company);
     doc.save(`Invoice-${invoice.invoiceNumber}.pdf`);
 }
 
-export function getInvoicePDFBlob(invoice: Invoice, company: CompanyInfo): Blob {
-    const doc = generateInvoicePDF(invoice, company);
+export async function getInvoicePDFBlob(invoice: Invoice, company: CompanyInfo): Promise<Blob> {
+    const doc = await generateInvoicePDF(invoice, company);
     return doc.output('blob');
 }
 
-export function getInvoicePDFBase64(invoice: Invoice, company: CompanyInfo): string {
-    const doc = generateInvoicePDF(invoice, company);
+export async function getInvoicePDFBase64(invoice: Invoice, company: CompanyInfo): Promise<string> {
+    const doc = await generateInvoicePDF(invoice, company);
     return doc.output('datauristring').split(',')[1];
 }

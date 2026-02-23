@@ -13,7 +13,7 @@ const defaultNewService: Omit<CatalogService, 'id'> = {
 };
 
 const SettingsPage: React.FC = () => {
-    const { settings, updateSettings, catalog, addCatalogItem, updateCatalogItem, removeCatalogItem } = useApp();
+    const { settings, updateSettings, catalog, addCatalogItem, updateCatalogItem, removeCatalogItem, uploadCompanyLogo } = useApp();
     const { signOut } = useAuth();
     const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
     const [newService, setNewService] = useState<Omit<CatalogService, 'id'>>(defaultNewService);
@@ -38,15 +38,19 @@ const SettingsPage: React.FC = () => {
         setLocalSettings(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 2 * 1024 * 1024) { toast.error('Logo must be under 2MB'); return; }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                handleCompanyChange('logoUrl', reader.result as string);
-            };
-            reader.readAsDataURL(file);
+
+            const loadingToast = toast.loading('Uploading logo...');
+            const publicUrl = await uploadCompanyLogo(file);
+            toast.dismiss(loadingToast);
+
+            if (publicUrl) {
+                handleCompanyChange('logoUrl', publicUrl);
+                toast.success('Logo uploaded and saved!');
+            }
         }
     };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import { useIsMobile } from './hooks/useMediaQuery';
 import DesktopApp from './components/DesktopApp';
 import MobileApp from './components/MobileApp';
@@ -13,17 +13,16 @@ type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
 
 const AppInner: React.FC = () => {
   const { user, loading } = useAuth();
+  const { draftInvoice, setDraftInvoice } = useApp();
   const [activePage, setActivePage] = useState<Page>('dashboard');
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const isMobile = useIsMobile();
 
   const handleNavigate = (page: string) => {
-    if (page !== 'new-invoice') setEditingInvoice(null);
     setActivePage(page as Page);
   };
 
   const handleEditInvoice = (invoice: Invoice) => {
-    setEditingInvoice(invoice);
+    setDraftInvoice(invoice);
     setActivePage('new-invoice');
   };
 
@@ -42,18 +41,18 @@ const AppInner: React.FC = () => {
   return isMobile ? (
     <MobileApp
       activePage={activePage}
-      editingInvoice={editingInvoice}
+      editingInvoice={draftInvoice as Invoice | null}
       handleNavigate={handleNavigate}
       handleEditInvoice={handleEditInvoice}
-      setEditingInvoice={setEditingInvoice}
+      setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
     />
   ) : (
     <DesktopApp
       activePage={activePage}
-      editingInvoice={editingInvoice}
+      editingInvoice={draftInvoice as Invoice | null}
       handleNavigate={handleNavigate}
       handleEditInvoice={handleEditInvoice}
-      setEditingInvoice={setEditingInvoice}
+      setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
     />
   );
 };

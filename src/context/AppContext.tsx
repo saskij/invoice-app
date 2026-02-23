@@ -51,6 +51,9 @@ interface AppContextType {
     restoreInvoice: (id: string) => void;
     getNextInvoiceNumber: () => string;
     bumpInvoiceNumber: () => void;
+    uploadCompanyLogo: (file: File) => Promise<string | null>;
+    draftInvoice: Partial<Invoice> | null;
+    setDraftInvoice: (invoice: Partial<Invoice> | null) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -60,6 +63,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const [catalog, setCatalog] = useState<CatalogService[]>(DEFAULT_CATALOG);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Fetch Initial Data
@@ -277,6 +281,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSettings({ ...settings, nextInvoiceNumber: newNextNumber });
     }, [settings, updateSettings]);
 
+    const uploadCompanyLogo = useCallback(async (file: File): Promise<string | null> => {
+        if (!user) return null;
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}/logo-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `company-logos/${fileName}`;
+
+            // Upload the file to the 'logos' bucket
+            const { error: uploadError } = await supabase.storage
+                .from('logos')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            // Get the public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('logos')
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('Error uploading logo:', error);
+            toast.error('Failed to upload logo.');
+            return null;
+        }
+    }, [user]);
+
     if (loading && user) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -291,6 +323,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             catalog, addCatalogItem, updateCatalogItem, removeCatalogItem,
             invoices, saveInvoice, deleteInvoice, hardDeleteInvoice, restoreInvoice,
             getNextInvoiceNumber, bumpInvoiceNumber,
+            uploadCompanyLogo,
+            draftInvoice, setDraftInvoice,
         }}>
             {children}
         </AppContext.Provider>

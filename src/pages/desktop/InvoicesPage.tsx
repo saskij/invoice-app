@@ -41,7 +41,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
         if (!settings.resend.apiKey) { toast.error('Configure Resend API Key in Settings first.'); return; }
         setSending(inv.id);
         try {
-            const pdfBase64 = getInvoicePDFBase64(inv, settings.company);
+            const pdfBase64 = await getInvoicePDFBase64(inv, settings.company);
             await sendInvoiceEmail({
                 config: settings.resend,
                 invoice: inv,
@@ -136,7 +136,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                                     ><Eye size={14} /></button>
                                                     <button
                                                         title="Download PDF"
-                                                        onClick={() => { downloadInvoicePDF(inv, settings.company); toast.success('PDF downloaded!'); }}
+                                                        onClick={async () => { await downloadInvoicePDF(inv, settings.company); toast.success('PDF downloaded!'); }}
                                                         style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: '#818cf8', display: 'flex' }}
                                                     ><Download size={14} /></button>
                                                     <button
@@ -184,7 +184,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                     invoice={previewInv}
                     company={settings.company}
                     onClose={() => setPreviewInv(null)}
-                    onDownload={() => { downloadInvoicePDF(previewInv, settings.company); toast.success('PDF downloaded!'); }}
+                    onDownload={async () => { await downloadInvoicePDF(previewInv, settings.company); toast.success('PDF downloaded!'); }}
                 />
             )}
 

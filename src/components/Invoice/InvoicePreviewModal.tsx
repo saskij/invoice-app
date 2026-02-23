@@ -6,7 +6,7 @@ interface Props {
     invoice: Invoice;
     company: CompanyInfo;
     onClose: () => void;
-    onDownload: () => void;
+    onDownload: () => void | Promise<void>;
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
