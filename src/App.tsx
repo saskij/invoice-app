@@ -9,7 +9,7 @@ import type { Invoice } from './types';
 import { AuthPage } from './pages/AuthPage';
 import { Loader2 } from 'lucide-react';
 
-type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
+type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
 
 const AppInner: React.FC = () => {
   const { user, loading } = useAuth();
