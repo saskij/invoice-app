@@ -43,39 +43,25 @@ export async function sendInvoiceEmail({
         filename: `Invoice-${invoice.invoiceNumber}.pdf`
     };
 
-    console.log('[ES] Sending email via direct fetch to Edge Function...');
-
-    // Get the session to get the JWT
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-        throw new Error('Not authenticated. Please log in again.');
-    }
-
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pgqawzeejmgbwfrirtvw.supabase.co';
-    const functionUrl = `${supabaseUrl}/functions/v1/send-invoice`;
+    console.log('[ES] Invoking Edge Function via official invoke method...');
 
     try {
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Z6n7RNbiclvtK4fpx8T7aw_gkgoJ0Ej'
-            },
-            body: JSON.stringify(payload)
+        const { data, error } = await supabase.functions.invoke('send-invoice', {
+            body: payload
         });
 
-        const result = await response.json();
-
-        if (!response.ok || (result && result.error)) {
-            const errorMsg = result?.error || result?.message || `HTTP ${response.status}: Failed to send email`;
-            console.error('[ES] Fetch error:', { status: response.status, result });
-            throw new Error(errorMsg);
+        if (error) {
+            console.error('[ES] Supabase invoke error:', error);
+            throw new Error(error.message || 'Supabase Function invocation failed');
         }
 
-        console.log('[ES] Email sent successfully:', result);
+        // The Edge Function now returns errors in the data body with 200 OK to avoid masking
+        if (data?.error) {
+            console.error('[ES] Edge Function logic error:', data.error);
+            throw new Error(data.error);
+        }
+
+        console.log('[ES] Email sent successfully:', data);
     } catch (err: any) {
         console.error('[ES] Network or Logic error:', err);
         throw err;
