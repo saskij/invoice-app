@@ -73,7 +73,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
 
                 {/* Navigation Group */}
                 <div style={{ padding: '24px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ px: 8, mb: 8, fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Navigation</div>
+                    <div style={{ paddingInline: 8, marginBottom: 8, fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Navigation</div>
 
                     <button
                         onClick={() => handleNav('catalog')}

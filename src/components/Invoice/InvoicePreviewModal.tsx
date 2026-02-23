@@ -149,17 +149,17 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 350 }}>
                                 <thead>
                                     <tr style={{ background: '#0f172a' }}>
-                                        {['Description', 'Qty', 'Price', 'Total'].map((h, i) => (
+                                        {['Description', 'Qty', 'Price', 'Total'].map((h, idx) => (
                                             <th key={h} style={{
-                                                padding: '10px', textAlign: i > 0 ? 'right' : 'left',
+                                                padding: '10px', textAlign: idx > 0 ? 'right' : 'left',
                                                 fontSize: 9, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.08em',
                                             }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {invoice.lineItems.map((item, i) => (
-                                        <tr key={item.id} style={{ background: i % 2 === 0 ? 'white' : '#f8fafc' }}>
+                                    {invoice.lineItems.map((item, idx) => (
+                                        <tr key={item.id} style={{ background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
                                             <td style={{ padding: '10px', fontSize: 12, color: '#0f172a', fontWeight: 500 }}>{item.description}</td>
                                             <td style={{ padding: '10px', fontSize: 12, color: '#64748b', textAlign: 'right' }}>{item.quantity}</td>
                                             <td style={{ padding: '10px', fontSize: 12, color: '#64748b', textAlign: 'right' }}>{fmt(item.unitPrice)}</td>
@@ -177,7 +177,7 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                                     { label: 'Subtotal', value: fmt(invoice.subtotal), show: true },
                                     { label: 'Discount', value: `-${fmt(invoice.discountAmount || 0)}`, show: !!(invoice.discountAmount && invoice.discountAmount > 0) },
                                     { label: `Tax (${invoice.taxRate}%)`, value: fmt(invoice.taxAmount), show: true },
-                                ].filter(row => row.show).map((row, i) => (
+                                ].filter(row => row.show).map((row) => (
                                     <div key={row.label} style={{
                                         display: 'flex', justifyContent: 'space-between', padding: '6px 0',
                                     }}>
