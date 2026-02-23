@@ -199,12 +199,20 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     };
 
     const handleSendEmail = async () => {
-        if (!activeClient.email) { toast.error('Client has no email address.'); return; }
+        let recipientEmail = activeClient.email || '';
+
+        if (!recipientEmail.trim()) {
+            const enteredEmail = window.prompt('Client email is missing. Please enter the recipient email address:', '');
+            if (!enteredEmail || !enteredEmail.trim()) return;
+            recipientEmail = enteredEmail.trim();
+        }
+
         setSending(true);
         try {
-            const pdfBase64 = await getInvoicePDFBase64(buildInvoice(), settings.company);
+            const currentInvoice = buildInvoice();
+            const pdfBase64 = await getInvoicePDFBase64(currentInvoice, settings.company);
             await sendInvoiceEmail({
-                invoice: buildInvoice(),
+                invoice: { ...currentInvoice, clientEmail: recipientEmail },
                 company: settings.company,
                 pdfBase64
             });

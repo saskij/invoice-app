@@ -46,17 +46,24 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
 
     const handleSendEmail = async (inv: Invoice) => {
-        if (!inv.client.email.trim()) { toast.error('Client email is missing.'); return; }
+        let recipientEmail = inv.clientEmail || inv.client?.email || '';
+
+        if (!recipientEmail.trim()) {
+            const enteredEmail = window.prompt('Client email is missing. Please enter the recipient email address:', '');
+            if (!enteredEmail || !enteredEmail.trim()) return;
+            recipientEmail = enteredEmail.trim();
+        }
+
         setSending(inv.id);
         try {
             const pdfBase64 = await getInvoicePDFBase64(inv, settings.company);
             await sendInvoiceEmail({
-                invoice: inv,
+                invoice: { ...inv, clientEmail: recipientEmail },
                 company: settings.company,
                 pdfBase64
             });
             saveInvoice({ ...inv, status: 'sent', updatedAt: new Date().toISOString() });
-            toast.success(`Invoice sent to ${inv.client.email}!`);
+            toast.success(`Invoice sent to ${recipientEmail}!`);
         } catch (err: any) {
             toast.error(err.message || 'Email failed.');
         } finally {

@@ -199,11 +199,23 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     };
 
     const handleSendEmail = async () => {
-        if (!activeClient.email) { toast.error('Client email required.'); return; }
+        let recipientEmail = activeClient.email || '';
+
+        if (!recipientEmail.trim()) {
+            const enteredEmail = window.prompt('Client email is missing. Please enter the recipient email address:', '');
+            if (!enteredEmail || !enteredEmail.trim()) return;
+            recipientEmail = enteredEmail.trim();
+        }
+
         setSending(true);
         try {
-            const pdfBase64 = await getInvoicePDFBase64(buildInvoice(), settings.company);
-            await sendInvoiceEmail({ invoice: buildInvoice(), company: settings.company, pdfBase64 });
+            const currentInvoice = buildInvoice();
+            const pdfBase64 = await getInvoicePDFBase64(currentInvoice, settings.company);
+            await sendInvoiceEmail({
+                invoice: { ...currentInvoice, clientEmail: recipientEmail },
+                company: settings.company,
+                pdfBase64
+            });
             handleSave('sent');
             toast.success('Sent!');
         } catch (err: any) {
