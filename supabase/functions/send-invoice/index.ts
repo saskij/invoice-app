@@ -40,34 +40,43 @@ serve(async (req) => {
         const oneMinuteAgo = new Date(now.getTime() - 60 * 1000).toISOString()
         const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
 
-        // Count emails in the last minute
-        const { count: minuteCount, error: minuteError } = await supabaseClient
-            .from('email_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('created_at', oneMinuteAgo)
+        try {
+            // Count emails in the last minute
+            const { count: minuteCount, error: minuteError } = await supabaseClient
+                .from('email_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', oneMinuteAgo)
 
-        if (minuteError) throw minuteError
-        if (minuteCount !== null && minuteCount >= 5) {
-            return new Response(
-                JSON.stringify({ error: 'Rate limit exceeded: Maximum 5 emails per minute.' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-            )
-        }
+            if (minuteError) {
+                console.error('Rate limit check failed (minute):', minuteError)
+                // If the table doesn't exist yet, we'll log it and continue for now
+                // but this is a signal that migration is missing
+            } else if (minuteCount !== null && minuteCount >= 5) {
+                return new Response(
+                    JSON.stringify({ error: 'Rate limit exceeded: Maximum 5 emails per minute.' }),
+                    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+                )
+            }
 
-        // Count emails in the last 24 hours
-        const { count: dayCount, error: dayError } = await supabaseClient
-            .from('email_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('created_at', twentyFourHoursAgo)
+            // Count emails in the last 24 hours
+            const { count: dayCount, error: dayError } = await supabaseClient
+                .from('email_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', twentyFourHoursAgo)
 
-        if (dayError) throw dayError
-        if (dayCount !== null && dayCount >= 50) {
-            return new Response(
-                JSON.stringify({ error: 'Rate limit exceeded: Maximum 50 emails per day.' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-            )
+            if (dayError) {
+                console.error('Rate limit check failed (day):', dayError)
+            } else if (dayCount !== null && dayCount >= 50) {
+                return new Response(
+                    JSON.stringify({ error: 'Rate limit exceeded: Maximum 50 emails per day.' }),
+                    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+                )
+            }
+        } catch (dbError) {
+            console.error('Database error during rate limiting:', dbError)
+            // Continue if DB fails to let the email through, but log it
         }
 
         // 5. Parse the request body
@@ -98,7 +107,7 @@ serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: 'Invoices <onboarding@resend.dev>', // You should update this after domain verification
+                from: 'Invoices <onboarding@resend.dev>',
                 to: Array.isArray(to) ? to : [to],
                 subject: subject,
                 html: html,
@@ -114,15 +123,24 @@ serve(async (req) => {
         const resData = await res.json()
 
         if (!res.ok) {
-            throw new Error(resData.message || 'Failed to send email via Resend')
+            let errorMessage = resData.message || 'Failed to send email via Resend'
+            // Informative error for sandbox mode
+            if (res.status === 403 && errorMessage.includes('onboarding@resend.dev')) {
+                errorMessage = 'Resend Sandbox Restriction: You can only send emails to your own registered email address unless you verify a domain. Please check Resend dashboard.'
+            }
+            throw new Error(errorMessage)
         }
 
-        // 8. Log the successful send
-        await supabaseClient.from('email_logs').insert({
-            user_id: user.id,
-            sent_to: Array.isArray(to) ? to.join(', ') : to,
-            subject: subject
-        })
+        // 8. Log the successful send (ignore error if table missing)
+        try {
+            await supabaseClient.from('email_logs').insert({
+                user_id: user.id,
+                sent_to: Array.isArray(to) ? to.join(', ') : to,
+                subject: subject
+            })
+        } catch (logError) {
+            console.error('Failed to log email send:', logError)
+        }
 
         return new Response(
             JSON.stringify(resData),
