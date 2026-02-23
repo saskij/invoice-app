@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider, useApp } from './context/AppContext';
 import { useIsMobile } from './hooks/useMediaQuery';
@@ -14,8 +14,16 @@ type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
 const AppInner: React.FC = () => {
   const { user, loading } = useAuth();
   const { draftInvoice, setDraftInvoice } = useApp();
-  const [activePage, setActivePage] = useState<Page>('dashboard');
+  const [activePage, setActivePage] = useState<Page>(() => {
+    const saved = localStorage.getItem('invoice_app_active_page');
+    return (saved as Page) || 'dashboard';
+  });
   const isMobile = useIsMobile();
+
+  // Sync activePage to localStorage
+  useEffect(() => {
+    localStorage.setItem('invoice_app_active_page', activePage);
+  }, [activePage]);
 
   const handleNavigate = (page: string) => {
     setActivePage(page as Page);

@@ -63,8 +63,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const [catalog, setCatalog] = useState<CatalogService[]>(DEFAULT_CATALOG);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(null);
+    const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(() => {
+        const saved = localStorage.getItem('invoice_app_draft');
+        return saved ? JSON.parse(saved) : null;
+    });
     const [loading, setLoading] = useState(true);
+
+    // Sync draft to localStorage
+    useEffect(() => {
+        if (draftInvoice) {
+            localStorage.setItem('invoice_app_draft', JSON.stringify(draftInvoice));
+        } else {
+            localStorage.removeItem('invoice_app_draft');
+        }
+    }, [draftInvoice]);
 
     // Fetch Initial Data
     useEffect(() => {
