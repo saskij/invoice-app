@@ -16,7 +16,7 @@ interface NewInvoicePageProps {
 const emptyClient: InvoiceClient = { name: '', email: '', company: '', address: '', city: '', state: '', zip: '' };
 
 const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, invoices, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
+    const { settings, catalog, invoices, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -26,7 +26,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const initialData = (editInvoice || effectiveDraft) as Partial<Invoice> | null;
 
     const [invoiceId] = useState(initialData?.id || uuidv4());
-    const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || getNextInvoiceNumber());
+    const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || '');
     const [client, setClient] = useState<InvoiceClient>(initialData?.client || emptyClient);
     const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
     const [issueDate, setIssueDate] = useState(initialData?.issueDate || today);
@@ -122,16 +122,24 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
         setDraftInvoice
     ]);
 
-    const handleSave = (newStatus: Invoice['status'] = status) => {
+    const handleSave = async (newStatus: Invoice['status'] = status) => {
         if (!editInvoice && isLimitReached) {
             toast.error(`Limit reached! Your Free plan allows up to ${settings.invoiceLimit} invoices. Please upgrade to Pro for unlimited access.`);
             return;
         }
         if (!client.name.trim()) { toast.error('Client name is required.'); return; }
         if (lineItems.length === 0) { toast.error('Add at least one line item.'); return; }
-        const inv = { ...buildInvoice(), status: newStatus };
+
+        let activeInvoiceNumber = invoiceNumber;
+        if (!editInvoice && !activeInvoiceNumber) {
+            const reserved = await reserveNextInvoiceNumber();
+            if (!reserved) return; // Error toast already shown in Context
+            activeInvoiceNumber = reserved;
+            setInvoiceNumber(reserved);
+        }
+
+        const inv = { ...buildInvoice(), invoiceNumber: activeInvoiceNumber, status: newStatus };
         saveInvoice(inv);
-        if (!editInvoice) bumpInvoiceNumber();
         setDraftInvoice(null);
         toast.success(`Invoice ${newStatus === 'draft' ? 'saved as draft' : 'saved'}!`);
         onSaved?.();
@@ -179,7 +187,12 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                         <div>
                             <label className="label">Invoice Number</label>
-                            <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} />
+                            <input
+                                className="input-field"
+                                value={invoiceNumber}
+                                onChange={e => setInvoiceNumber(e.target.value)}
+                                placeholder="Auto-generated on save"
+                            />
                         </div>
                         <div>
                             <label className="label">Issue Date</label>

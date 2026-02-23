@@ -51,8 +51,7 @@ interface AppContextType {
     deleteInvoice: (id: string) => void;
     hardDeleteInvoice: (id: string) => void;
     restoreInvoice: (id: string) => void;
-    getNextInvoiceNumber: () => string;
-    bumpInvoiceNumber: () => void;
+    reserveNextInvoiceNumber: () => Promise<string | null>;
     uploadCompanyLogo: (file: File) => Promise<string | null>;
     draftInvoice: Partial<Invoice> | null;
     setDraftInvoice: (invoice: Partial<Invoice> | null) => void;
@@ -402,16 +401,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [user, currentPage, fetchPage]);
 
-    const getNextInvoiceNumber = useCallback(() => {
-        const prefix = settings.invoicePrefix || 'INV';
-        const num = settings.nextInvoiceNumber || 1001;
-        return `${prefix}-${String(num).padStart(4, '0')}`;
-    }, [settings.invoicePrefix, settings.nextInvoiceNumber]);
+    const reserveNextInvoiceNumber = useCallback(async (): Promise<string | null> => {
+        if (!user) return null;
+        try {
+            const { data, error } = await supabase.rpc('get_next_invoice_number');
+            if (error) throw error;
 
-    const bumpInvoiceNumber = useCallback(() => {
-        const newNextNumber = (settings.nextInvoiceNumber || 1001) + 1;
-        updateSettings({ ...settings, nextInvoiceNumber: newNextNumber });
-    }, [settings, updateSettings]);
+            // Increment local settings so we stay in sync if possible, 
+            // though the server is now the source of truth.
+            setSettings(prev => ({
+                ...prev,
+                nextInvoiceNumber: (prev.nextInvoiceNumber || 1001) + 1
+            }));
+
+            return data;
+        } catch (error) {
+            console.error('Error reserving next invoice number:', error);
+            toast.error('Failed to generate invoice number.');
+            return null;
+        }
+    }, [user]);
 
 
     const uploadCompanyLogo = useCallback(async (file: File): Promise<string | null> => {
@@ -455,7 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             settings, updateSettings,
             catalog, addCatalogItem, updateCatalogItem, removeCatalogItem,
             invoices, saveInvoice, deleteInvoice, hardDeleteInvoice, restoreInvoice,
-            getNextInvoiceNumber, bumpInvoiceNumber,
+            reserveNextInvoiceNumber,
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,
             activePage, setActivePage,
