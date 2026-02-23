@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import { supabase } from '../lib/supabaseClient';
 import type { Invoice, CompanyInfo } from '../types';
 
@@ -46,10 +47,16 @@ export async function sendInvoiceEmail({
     });
 
     if (error) {
+        Sentry.captureException(new Error(error.message || 'Failed to send email via Supabase Function'), {
+            extra: { invoiceNumber: invoice.invoiceNumber, clientEmail: invoice.client.email }
+        });
         throw new Error(error.message || 'Failed to send email via Supabase Function');
     }
 
     if (data?.error) {
+        Sentry.captureException(new Error(data.error), {
+            extra: { invoiceNumber: invoice.invoiceNumber, clientEmail: invoice.client.email }
+        });
         throw new Error(data.error);
     }
 }

@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import * as Sentry from "@sentry/react";
 
 interface Props {
     children: ReactNode;
@@ -23,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error('Uncaught error:', error, errorInfo);
-        // You could also log this to Supabase or an error reporting service here
+        Sentry.captureException(error, { extra: { ...errorInfo } });
     }
 
     private handleReload = () => {
