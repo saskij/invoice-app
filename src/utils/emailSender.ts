@@ -42,6 +42,7 @@ export async function sendInvoiceEmail({
         filename: `Invoice-${invoice.invoiceNumber}.pdf`
     };
 
+    console.log('Invoking Edge Function send-invoice with payload:', { ...payload, pdfBase64: payload.pdfBase64 ? '(base64 string)' : 'none' });
     const { data, error } = await supabase.functions.invoke('send-invoice', {
         body: payload
     });

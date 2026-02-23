@@ -8,8 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase URL or Anon Key is missing!');
 }
 
+console.log('Supabase Client Initializing with URL:', supabaseUrl);
 if (supabaseAnonKey.startsWith('sb_publishable_')) {
-    console.warn('Using a publishable key. Ensure your Supabase project supports this or switch to a legacy anon key if you encounter issues.');
+    console.warn('Using a new format publishable key (sb_).');
+} else if (supabaseAnonKey.startsWith('eyJ')) {
+    console.log('Using a legacy format JWT key (eyJ).');
+} else {
+    console.error('Unknown Supabase key format detected!');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
