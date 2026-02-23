@@ -125,8 +125,14 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                                 <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{invoice.clientName || invoice.client?.name}</div>
                                 <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.6 }}>
                                     {(invoice.clientCompany || invoice.client?.company) && <div>{invoice.clientCompany || invoice.client?.company}</div>}
-                                    {invoice.client?.address && <div>{invoice.client.address}</div>}
-                                    {invoice.client?.email && <div>{invoice.client.email}</div>}
+                                    {(invoice.clientAddress || invoice.client?.address) && <div>{invoice.clientAddress || invoice.client?.address}</div>}
+                                    {(invoice.clientCity || invoice.clientState || invoice.clientZip) && (
+                                        <div>
+                                            {[invoice.clientCity, invoice.clientState, invoice.clientZip].filter(Boolean).join(', ') ||
+                                                [invoice.client?.city, invoice.client?.state, invoice.client?.zip].filter(Boolean).join(', ')}
+                                        </div>
+                                    )}
+                                    {(invoice.clientEmail || invoice.client?.email) && <div>{invoice.clientEmail || invoice.client?.email}</div>}
                                 </div>
                             </div>
                             <div style={{ background: '#f8fafc', borderRadius: 10, padding: '16px' }}>

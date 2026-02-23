@@ -127,11 +127,11 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
 
         const clientName = invoice.clientName || invoice.client?.name || 'Client Name';
         const clientCompany = invoice.clientCompany || invoice.client?.company;
-        const clientEmail = invoice.client?.email || '';
-        const clientAddress = invoice.client?.address || '';
-        const clientCity = invoice.client?.city || '';
-        const clientState = invoice.client?.state || '';
-        const clientZip = invoice.client?.zip || '';
+        const clientEmail = invoice.clientEmail || invoice.client?.email || '';
+        const clientAddress = invoice.clientAddress || invoice.client?.address || '';
+        const clientCity = invoice.clientCity || invoice.client?.city || '';
+        const clientState = invoice.clientState || invoice.client?.state || '';
+        const clientZip = invoice.clientZip || invoice.client?.zip || '';
 
         doc.text(sanitizeInput(clientName), margin + 14, y + 36);
         doc.setFont('helvetica', 'normal');

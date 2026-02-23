@@ -102,6 +102,11 @@ export interface Invoice {
     clientName?: string;
     clientCompany?: string;
     clientEmail?: string;
+    clientPhone?: string;
+    clientAddress?: string;
+    clientCity?: string;
+    clientState?: string;
+    clientZip?: string;
     notes: string;
     paymentTerms: string;
     paymentInfo: string;

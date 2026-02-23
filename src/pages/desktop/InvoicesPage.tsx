@@ -131,8 +131,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                 >
                                     <td style={{ padding: '14px 18px', fontWeight: 700, color: '#818cf8', fontSize: 13 }}>#{inv.invoiceNumber}</td>
                                     <td style={{ padding: '14px 18px' }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{inv.client.name}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.client.company}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{inv.clientName || inv.client?.name}</div>
+                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.clientCompany || inv.client?.company}</div>
                                     </td>
                                     <td style={{ padding: '14px 18px', fontSize: 12, color: '#94a3b8' }}>
                                         {inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}

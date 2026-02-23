@@ -116,8 +116,8 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                                 <div>
                                     <div style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 4 }}>#{inv.invoiceNumber}</div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{inv.client.name}</div>
-                                    <div style={{ fontSize: 12, color: '#64748b' }}>{inv.client.company}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{inv.clientName || inv.client?.name}</div>
+                                    <div style={{ fontSize: 12, color: '#64748b' }}>{inv.clientCompany || inv.client?.company}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0', marginBottom: 2 }}>{fmt(inv.total)}</div>

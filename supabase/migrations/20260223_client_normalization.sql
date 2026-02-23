@@ -67,12 +67,18 @@ BEGIN
     END LOOP;
 END $$;
 
--- 4. Update invoices_view to include client names from the new table
+-- 4. Update invoices_view to include client details from the new table
 CREATE OR REPLACE VIEW public.invoices_view AS
 SELECT 
     i.*,
     c.name as "clientName",
     c.company as "clientCompany",
+    c.email as "clientEmail",
+    c.phone as "clientPhone",
+    c.address as "clientAddress",
+    c.city as "clientCity",
+    c.state as "clientState",
+    c.zip as "clientZip",
     (i.total - i."paidAmount") as "balanceDue",
     CASE 
         WHEN i.status = 'deleted' THEN 'deleted'
