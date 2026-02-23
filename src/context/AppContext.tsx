@@ -54,6 +54,8 @@ interface AppContextType {
     uploadCompanyLogo: (file: File) => Promise<string | null>;
     draftInvoice: Partial<Invoice> | null;
     setDraftInvoice: (invoice: Partial<Invoice> | null) => void;
+    activePage: 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
+    setActivePage: (page: 'dashboard' | 'new-invoice' | 'invoices' | 'settings') => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -75,6 +77,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(() => {
         const saved = localStorage.getItem('invoice_app_draft');
         return saved ? JSON.parse(saved) : null;
+    });
+    const [activePage, setActivePage] = useState<'dashboard' | 'new-invoice' | 'invoices' | 'settings'>(() => {
+        const saved = localStorage.getItem('invoice_app_active_page');
+        return (saved as any) || 'dashboard';
     });
     const [loading, setLoading] = useState(true);
 
@@ -101,6 +107,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     useEffect(() => {
         localStorage.setItem('invoice_app_settings', JSON.stringify(settings));
     }, [settings]);
+
+    // Sync activePage to localStorage
+    useEffect(() => {
+        localStorage.setItem('invoice_app_active_page', activePage);
+    }, [activePage]);
 
     // Fetch Initial Data
     useEffect(() => {
@@ -361,6 +372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             getNextInvoiceNumber, bumpInvoiceNumber,
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,
+            activePage, setActivePage,
         }}>
             {children}
         </AppContext.Provider>

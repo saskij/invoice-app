@@ -16,26 +16,30 @@ interface NewInvoicePageProps {
 const emptyClient: InvoiceClient = { name: '', email: '', company: '', address: '', city: '', state: '', zip: '' };
 
 const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, setDraftInvoice } = useApp();
+    const { settings, catalog, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
 
-    const [invoiceId] = useState(editInvoice?.id || uuidv4());
-    const [invoiceNumber, setInvoiceNumber] = useState(editInvoice?.invoiceNumber || getNextInvoiceNumber());
-    const [client, setClient] = useState<InvoiceClient>(editInvoice?.client || emptyClient);
-    const [lineItems, setLineItems] = useState<LineItem[]>(editInvoice?.lineItems || []);
-    const [issueDate, setIssueDate] = useState(editInvoice?.issueDate || today);
-    const [dueDate, setDueDate] = useState(editInvoice?.dueDate || thirtyDays);
-    const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(editInvoice?.discountType || 'percentage');
-    const [discountValue, setDiscountValue] = useState(editInvoice?.discountValue || 0);
-    const [taxRate, setTaxRate] = useState(editInvoice?.taxRate ?? settings.defaultTaxRate ?? 0);
-    const [notes, setNotes] = useState(editInvoice?.notes || '');
-    const [paymentTerms, setPaymentTerms] = useState(editInvoice?.paymentTerms || settings.defaultPaymentTerms || '');
-    const [paymentInfo, setPaymentInfo] = useState(editInvoice?.paymentInfo || settings.paymentInfo || '');
+    // Use draft if it's the same invoice we are editing or if we are creating new and there's a draft
+    const effectiveDraft = (draftInvoice && (editInvoice ? draftInvoice.id === editInvoice.id : !draftInvoice.id)) ? draftInvoice : null;
+    const initialData = (editInvoice || effectiveDraft) as Partial<Invoice> | null;
+
+    const [invoiceId] = useState(initialData?.id || uuidv4());
+    const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || getNextInvoiceNumber());
+    const [client, setClient] = useState<InvoiceClient>(initialData?.client || emptyClient);
+    const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
+    const [issueDate, setIssueDate] = useState(initialData?.issueDate || today);
+    const [dueDate, setDueDate] = useState(initialData?.dueDate || thirtyDays);
+    const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(initialData?.discountType || 'percentage');
+    const [discountValue, setDiscountValue] = useState(initialData?.discountValue || 0);
+    const [taxRate, setTaxRate] = useState(initialData?.taxRate ?? settings.defaultTaxRate ?? 0);
+    const [notes, setNotes] = useState(initialData?.notes || '');
+    const [paymentTerms, setPaymentTerms] = useState(initialData?.paymentTerms || settings.defaultPaymentTerms || '');
+    const [paymentInfo, setPaymentInfo] = useState(initialData?.paymentInfo || settings.paymentInfo || '');
     const [showPreview, setShowPreview] = useState(false);
     const [sending, setSending] = useState(false);
-    const [status, setStatus] = useState(editInvoice?.status || 'draft' as Invoice['status']);
+    const [status, setStatus] = useState(initialData?.status || 'draft' as Invoice['status']);
 
     const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
 
