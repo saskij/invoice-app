@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { AppSettings, CatalogService } from '../../types';
-import { Save, Plus, Trash2, Briefcase, Building2, Tag, LogOut } from 'lucide-react';
+import { Save, Plus, Trash2, Briefcase, Building2, Tag, LogOut, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -19,7 +19,7 @@ const SettingsPageMobile: React.FC = () => {
     const [newService, setNewService] = useState<Omit<CatalogService, 'id'>>(defaultNewService);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editBuf, setEditBuf] = useState<CatalogService | null>(null);
-    const [activeTab, setActiveTab] = useState<'company' | 'catalog'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'catalog' | 'resend'>('company');
 
     const saveSettings = () => {
         updateSettings(localSettings);
@@ -33,8 +33,15 @@ const SettingsPageMobile: React.FC = () => {
         }));
     };
 
-    const handleSettingsChange = (field: string, value: string | number) => {
+    const handleSettingsChange = (field: string, value: any) => {
         setLocalSettings(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleResendChange = (field: string, value: string) => {
+        setLocalSettings(prev => ({
+            ...prev,
+            resend: { ...prev.resend, [field]: value },
+        }));
     };
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +66,7 @@ const SettingsPageMobile: React.FC = () => {
     const tabs = [
         { id: 'company', label: 'Company Info', icon: Building2 },
         { id: 'catalog', label: 'Service Catalog', icon: Tag },
+        { id: 'resend', label: 'Email Settings', icon: Mail },
     ] as const;
 
     return (
@@ -78,6 +86,7 @@ const SettingsPageMobile: React.FC = () => {
                                 background: activeTab === tab.id ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'transparent',
                                 color: activeTab === tab.id ? 'white' : '#64748b',
                                 transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
                             }}
                         >
                             <Icon size={14} />{tab.label}
@@ -105,7 +114,7 @@ const SettingsPageMobile: React.FC = () => {
                             { label: 'ZIP Code', field: 'zip', placeholder: '10001' },
                             { label: 'Tax ID / EIN', field: 'taxId', placeholder: '12-3456789' },
                         ].map(f => (
-                            <div key={f.field} style={f.field === 'address' ? { gridColumn: '1 / -1' } : {}}>
+                            <div key={f.field}>
                                 <label className="label">{f.label}</label>
                                 <input
                                     className="input-field"
@@ -153,19 +162,19 @@ const SettingsPageMobile: React.FC = () => {
                             <input className="input-field" value={localSettings.defaultPaymentTerms || ''} onChange={e => handleSettingsChange('defaultPaymentTerms', e.target.value)} placeholder="Payment due within 30 days..." />
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <label className="label">Default Payment Instructions (Zelle, Venmo, PayPal, etc.)</label>
+                            <label className="label">Default Payment Instructions</label>
                             <textarea
                                 className="input-field"
                                 style={{ minHeight: 80, resize: 'vertical' }}
                                 value={localSettings.paymentInfo || ''}
                                 onChange={e => handleSettingsChange('paymentInfo', e.target.value)}
-                                placeholder="E.g. Zelle: your@email.com&#10;Venmo: @your-username"
+                                placeholder="E.g. Zelle: your@email.com"
                             />
                         </div>
                     </div>
 
                     <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="btn-primary" onClick={saveSettings}><Save size={15} />Save Settings</button>
+                        <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={saveSettings}><Save size={15} />Save Settings</button>
                     </div>
                 </div>
             )}
@@ -199,9 +208,9 @@ const SettingsPageMobile: React.FC = () => {
                                     <Plus size={15} />Add
                                 </button>
                             </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
+                            <div>
                                 <label className="label">Description (optional)</label>
-                                <input className="input-field" value={newService.description} onChange={e => setNewService(p => ({ ...p, description: e.target.value }))} placeholder="Brief description of the service..." />
+                                <input className="input-field" value={newService.description} onChange={e => setNewService(p => ({ ...p, description: e.target.value }))} placeholder="Brief description..." />
                             </div>
                         </div>
                     </div>
@@ -212,49 +221,77 @@ const SettingsPageMobile: React.FC = () => {
                             <span style={{ fontWeight: 700, fontSize: 15, color: '#e2e8f0' }}>Service Catalog ({catalog.length})</span>
                         </div>
                         {catalog.length === 0 ? (
-                            <div style={{ padding: 40, textAlign: 'center', color: '#475569', fontSize: 14 }}>No services yet. Add your first service above.</div>
+                            <div style={{ padding: 40, textAlign: 'center', color: '#475569', fontSize: 14 }}>No services yet.</div>
                         ) : (
                             catalog.map((svc, i) => (
                                 <div key={svc.id} style={{
-                                    padding: '14px 24px',
+                                    padding: '14px 20px',
                                     borderTop: i === 0 ? 'none' : '1px solid rgba(99,102,241,0.08)',
-                                    display: 'flex', alignItems: 'center', gap: 14,
+                                    display: 'flex', flexDirection: 'column', gap: 12,
                                     background: i % 2 ? 'rgba(15,23,42,0.2)' : 'transparent',
                                 }}>
                                     {editingId === svc.id && editBuf ? (
-                                        <>
-                                            <input className="input-field" style={{ flex: 2 }} value={editBuf.name} onChange={e => setEditBuf(b => b ? { ...b, name: e.target.value } : b)} />
-                                            <input className="input-field" style={{ flex: 1 }} value={editBuf.description} onChange={e => setEditBuf(b => b ? { ...b, description: e.target.value } : b)} placeholder="Description" />
-                                            <input className="input-field" type="number" style={{ width: 100 }} value={editBuf.defaultPrice} onChange={e => setEditBuf(b => b ? { ...b, defaultPrice: Number(e.target.value) } : b)} />
-                                            <select className="input-field" style={{ width: 90 }} value={editBuf.unit} onChange={e => setEditBuf(b => b ? { ...b, unit: e.target.value } : b)}>
-                                                {['project', 'hour', 'page', 'month', 'item'].map(u => <option key={u} value={u}>{u}</option>)}
-                                            </select>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            <input className="input-field" value={editBuf.name} onChange={e => setEditBuf(b => b ? { ...b, name: e.target.value } : b)} />
                                             <div style={{ display: 'flex', gap: 8 }}>
-                                                <button className="btn-success" style={{ padding: '7px 14px', fontSize: 12 }} onClick={() => { updateCatalogItem(editBuf); setEditingId(null); toast.success('Service updated!'); }}>Save</button>
-                                                <button className="btn-secondary" style={{ padding: '7px 14px', fontSize: 12 }} onClick={() => setEditingId(null)}>Cancel</button>
+                                                <input className="input-field" type="number" style={{ flex: 1 }} value={editBuf.defaultPrice} onChange={e => setEditBuf(b => b ? { ...b, defaultPrice: Number(e.target.value) } : b)} />
+                                                <select className="input-field" style={{ flex: 1 }} value={editBuf.unit} onChange={e => setEditBuf(b => b ? { ...b, unit: e.target.value } : b)}>
+                                                    {['project', 'hour', 'page', 'month', 'item'].map(u => <option key={u} value={u}>{u}</option>)}
+                                                </select>
                                             </div>
-                                        </>
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                <button className="btn-success" style={{ flex: 1 }} onClick={() => { updateCatalogItem(editBuf); setEditingId(null); toast.success('Updated!'); }}>Save</button>
+                                                <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setEditingId(null)}>Cancel</button>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ fontWeight: 600, fontSize: 14, color: '#e2e8f0' }}>{svc.name}</div>
-                                                {svc.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{svc.description}</div>}
-                                            </div>
-                                            <div style={{ textAlign: 'right', minWidth: 100 }}>
-                                                <div style={{ fontWeight: 700, fontSize: 15, color: '#a5b4fc' }}>
-                                                    ${svc.defaultPrice.toLocaleString()}
+                                                <div style={{ fontWeight: 700, fontSize: 14, color: '#a5b4fc', marginTop: 2 }}>
+                                                    ${svc.defaultPrice} / {svc.unit}
                                                 </div>
-                                                <div style={{ fontSize: 11, color: '#475569' }}>per {svc.unit}</div>
                                             </div>
                                             <div style={{ display: 'flex', gap: 8 }}>
-                                                <button className="btn-secondary" style={{ padding: '7px 14px', fontSize: 12 }} onClick={() => { setEditingId(svc.id); setEditBuf({ ...svc }); }}>Edit</button>
-                                                <button className="btn-danger" style={{ padding: '7px 10px' }} onClick={() => { removeCatalogItem(svc.id); toast.success('Service removed.'); }}><Trash2 size={14} /></button>
+                                                <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => { setEditingId(svc.id); setEditBuf({ ...svc }); }}>Edit</button>
+                                                <button className="btn-danger" style={{ padding: '6px 10px' }} onClick={() => { removeCatalogItem(svc.id); toast.success('Removed.'); }}><Trash2 size={14} /></button>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             ))
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Email Settings ── */}
+            {activeTab === 'resend' && (
+                <div className="glass-card animate-slide-in" style={{ padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                        <Mail size={18} color="#4f46e5" />
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>Email Settings</h2>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ background: 'rgba(99,102,241,0.05)', padding: 14, borderRadius: 12, border: '1px solid rgba(99,102,241,0.1)' }}>
+                            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                                Use <strong>Resend</strong> to deliver invoices. Get your API key at <a href="https://resend.com" target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8' }}>resend.com</a>
+                            </p>
+                        </div>
+                        <div>
+                            <label className="label">Resend API Key</label>
+                            <input
+                                className="input-field"
+                                type="password"
+                                value={localSettings.resend?.apiKey || ''}
+                                onChange={e => handleResendChange('apiKey', e.target.value)}
+                                placeholder="re_..."
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 24 }}>
+                        <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={saveSettings}><Save size={15} />Save Settings</button>
                     </div>
                 </div>
             )}
@@ -264,7 +301,7 @@ const SettingsPageMobile: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>Account</h2>
-                        <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>Sign out of your account on this device.</p>
+                        <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>Sign out of your account.</p>
                     </div>
                     <button
                         className="btn-danger"

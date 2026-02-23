@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw } from 'lucide-react';
 import type { Invoice } from '../../types';
@@ -16,26 +16,30 @@ const STATUS_OPTS = ['all', 'draft', 'sent', 'paid', 'overdue', 'deleted'] as co
 const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
     const {
         invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, settings,
-        currentPage, totalCount, pageSize, fetchPage
+        currentPage, totalCount, pageSize, fetchPage,
+        searchQuery, setSearchQuery, statusFilter, setStatusFilter
     } = useApp();
-    const [filter, setFilter] = useState<string>('all');
-    const [search, setSearch] = useState('');
     const [previewInv, setPreviewInv] = useState<Invoice | null>(null);
     const [sending, setSending] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [localSearch, setLocalSearch] = useState(searchQuery);
 
-    const filtered = invoices
-        .filter(i => {
-            if (filter === 'all') return i.status !== 'deleted';
-            return i.status === filter;
-        })
-        .filter(i =>
-            !search ||
-            i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-            i.client.name.toLowerCase().includes(search.toLowerCase()) ||
-            i.client.company.toLowerCase().includes(search.toLowerCase())
-        )
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Search Debouncing
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (localSearch !== searchQuery) {
+                setSearchQuery(localSearch);
+                fetchPage(1, localSearch, statusFilter);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [localSearch, searchQuery, fetchPage, statusFilter, setSearchQuery]);
+
+    // Filter Change Handling
+    const handleFilterChange = (newStatus: string) => {
+        setStatusFilter(newStatus);
+        fetchPage(1, localSearch, newStatus);
+    };
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
 
@@ -68,20 +72,20 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                         className="input-field"
                         style={{ paddingLeft: 36 }}
                         placeholder="Search invoices…"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        value={localSearch}
+                        onChange={e => setLocalSearch(e.target.value)}
                     />
                 </div>
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
                     {STATUS_OPTS.map(s => (
                         <button
                             key={s}
-                            onClick={() => setFilter(s)}
+                            onClick={() => handleFilterChange(s)}
                             style={{
                                 padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
                                 whiteSpace: 'nowrap',
-                                background: filter === s ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'rgba(99,102,241,0.1)',
-                                color: filter === s ? 'white' : '#64748b',
+                                background: statusFilter === s ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'rgba(99,102,241,0.1)',
+                                color: statusFilter === s ? 'white' : '#64748b',
                                 transition: 'all 0.2s',
                             }}
                         >
@@ -93,12 +97,12 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
 
             {/* List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {filtered.length === 0 ? (
+                {invoices.length === 0 ? (
                     <div className="glass-card" style={{ padding: 40, textAlign: 'center', color: '#475569', fontSize: 14 }}>
                         No invoices found.
                     </div>
                 ) : (
-                    filtered.map((inv) => (
+                    invoices.map((inv) => (
                         <div key={inv.id} className="glass-card" style={{ padding: 16 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                                 <div>

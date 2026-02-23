@@ -25,6 +25,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     nextInvoiceNumber: 1001,
     subscriptionStatus: 'free',
     invoiceLimit: 5,
+    resend: {
+        apiKey: '',
+    },
 };
 
 const DEFAULT_CATALOG: CatalogService[] = [
@@ -58,7 +61,11 @@ interface AppContextType {
     currentPage: number;
     totalCount: number;
     pageSize: number;
-    fetchPage: (page: number) => Promise<void>;
+    searchQuery: string;
+    setSearchQuery: (q: string) => void;
+    statusFilter: string;
+    setStatusFilter: (s: string) => void;
+    fetchPage: (page: number, search?: string, status?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -87,6 +94,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
     const pageSize = 10;
     const [loading, setLoading] = useState(true);
 
@@ -147,6 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         nextInvoiceNumber: settingsData.nextInvoiceNumber || DEFAULT_SETTINGS.nextInvoiceNumber,
                         subscriptionStatus: settingsData.subscription_status || DEFAULT_SETTINGS.subscriptionStatus,
                         invoiceLimit: settingsData.invoice_limit ?? DEFAULT_SETTINGS.invoiceLimit,
+                        resend: settingsData.resend || DEFAULT_SETTINGS.resend,
                     });
                 }
 
@@ -203,6 +213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     nextInvoiceNumber: newSettings.nextInvoiceNumber,
                     subscription_status: newSettings.subscriptionStatus,
                     invoice_limit: newSettings.invoiceLimit,
+                    resend: newSettings.resend,
                     updatedAt: new Date().toISOString(),
                 });
             if (error) throw error;
@@ -257,17 +268,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [user]);
 
-    const fetchPage = useCallback(async (page: number) => {
+    const fetchPage = useCallback(async (page: number, search?: string, status?: string) => {
         if (!user) return;
         setLoading(true);
         try {
+            const currentSearch = search !== undefined ? search : searchQuery;
+            const currentStatus = status !== undefined ? status : statusFilter;
+
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
-            const { data, error, count } = await supabase
+            let query = supabase
                 .from('invoices')
                 .select('*', { count: 'exact' })
-                .eq('user_id', user.id)
+                .eq('user_id', user.id);
+
+            // Apply search
+            if (currentSearch.trim()) {
+                const s = `%${currentSearch.trim()}%`;
+                query = query.or(`invoiceNumber.ilike.${s},notes.ilike.${s}`);
+                // Note: searching nested JSONB client name in standard Postgres ILIKE is tricky in one go with OR 
+                // but we can try client->>name if it was a column. Since client is JSONB:
+                // query = query.or(`invoiceNumber.ilike.${s},client->>name.ilike.${s},client->>company.ilike.${s}`);
+                // Actually Supabase or filter syntax for JSONB is: "client->>name".ilike.%...%
+                // Let's use simpler search for now (invoice number and notes) or try full or:
+                query = supabase
+                    .from('invoices')
+                    .select('*', { count: 'exact' })
+                    .eq('user_id', user.id)
+                    .or(`invoiceNumber.ilike.${s},notes.ilike.${s},client->>name.ilike.${s},client->>company.ilike.${s}`);
+            }
+
+            // Apply status filter
+            if (currentStatus !== 'all') {
+                query = query.eq('status', currentStatus);
+            } else {
+                query = query.neq('status', 'deleted'); // Default to hiding trash unless explicitly filtered
+            }
+
+            const { data, error, count } = await query
                 .order('createdAt', { ascending: false })
                 .range(from, to);
 
@@ -285,7 +324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } finally {
             setLoading(false);
         }
-    }, [user, pageSize]);
+    }, [user, pageSize, searchQuery, statusFilter]);
 
     const saveInvoice = useCallback(async (invoice: Invoice) => {
         if (!user) return;
@@ -302,7 +341,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (isNew) {
                 // If it's new, go to page 1 to show it
-                await fetchPage(1);
+                setSearchQuery('');
+                setStatusFilter('all');
+                await fetchPage(1, '', 'all');
             } else {
                 // If it was an edit, just refresh current page
                 await fetchPage(currentPage);
@@ -418,7 +459,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,
             activePage, setActivePage,
-            currentPage, totalCount, pageSize, fetchPage
+            currentPage, totalCount, pageSize, fetchPage,
+            searchQuery, setSearchQuery, statusFilter, setStatusFilter
         }}>
             {children}
         </AppContext.Provider>

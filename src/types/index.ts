@@ -21,6 +21,9 @@ export interface AppSettings {
     nextInvoiceNumber: number;
     subscriptionStatus: 'free' | 'pro';
     invoiceLimit: number;
+    resend: {
+        apiKey: string;
+    };
 }
 
 export interface CatalogService {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { AppSettings, CatalogService } from '../../types';
-import { Save, Plus, Trash2, Briefcase, Building2, Tag, LogOut } from 'lucide-react';
+import { Save, Plus, Trash2, Briefcase, Building2, Tag, LogOut, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -19,7 +19,7 @@ const SettingsPage: React.FC = () => {
     const [newService, setNewService] = useState<Omit<CatalogService, 'id'>>(defaultNewService);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editBuf, setEditBuf] = useState<CatalogService | null>(null);
-    const [activeTab, setActiveTab] = useState<'company' | 'catalog'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'catalog' | 'resend'>('company');
 
     const saveSettings = () => {
         updateSettings(localSettings);
@@ -33,8 +33,15 @@ const SettingsPage: React.FC = () => {
         }));
     };
 
-    const handleSettingsChange = (field: string, value: string | number) => {
+    const handleSettingsChange = (field: string, value: any) => {
         setLocalSettings(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleResendChange = (field: string, value: string) => {
+        setLocalSettings(prev => ({
+            ...prev,
+            resend: { ...prev.resend, [field]: value },
+        }));
     };
 
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +70,7 @@ const SettingsPage: React.FC = () => {
     const tabs = [
         { id: 'company', label: 'Company Info', icon: Building2 },
         { id: 'catalog', label: 'Service Catalog', icon: Tag },
+        { id: 'resend', label: 'Email Settings', icon: Mail },
     ] as const;
 
     return (
@@ -259,6 +267,39 @@ const SettingsPage: React.FC = () => {
                                 </div>
                             ))
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Email Settings ── */}
+            {activeTab === 'resend' && (
+                <div className="glass-card animate-slide-in" style={{ padding: 28 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                        <Mail size={18} color="#4f46e5" />
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#e2e8f0' }}>Email Settings (Resend)</h2>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                        <div style={{ background: 'rgba(99,102,241,0.05)', padding: 16, borderRadius: 12, border: '1px solid rgba(99,102,241,0.1)', marginBottom: 8 }}>
+                            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                                We use <strong>Resend</strong> to deliver your invoices via email.
+                                To get started, <a href="https://resend.com" target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', fontWeight: 600 }}>sign up for a free account</a>,
+                                create an API key, and paste it below.
+                            </p>
+                        </div>
+                        <div>
+                            <label className="label">Resend API Key</label>
+                            <input
+                                className="input-field"
+                                type="password"
+                                value={localSettings.resend?.apiKey || ''}
+                                onChange={e => handleResendChange('apiKey', e.target.value)}
+                                placeholder="re_123456789..."
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="btn-primary" onClick={saveSettings}><Save size={15} />Save Settings</button>
                     </div>
                 </div>
             )}
