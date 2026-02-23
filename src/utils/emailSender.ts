@@ -45,6 +45,15 @@ export async function sendInvoiceEmail({
 
     console.log('[ES] Invoking Edge Function via official invoke method...');
 
+    // Debug: Check session before invoking
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        console.warn('[ES] No active session found. Function might fail if it requires auth.');
+    } else {
+        console.log('[ES] Active session found for user:', session.user.email);
+        console.log('[ES] JWT Expiry:', new Date(session.expires_at! * 1000).toLocaleString());
+    }
+
     try {
         const { data, error } = await supabase.functions.invoke('send-invoice', {
             body: payload
