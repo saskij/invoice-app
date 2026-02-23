@@ -8,7 +8,7 @@ import InvoicesPageMobile from '../pages/mobile/InvoicesPageMobile';
 import SettingsPageMobile from '../pages/mobile/SettingsPageMobile';
 import type { Invoice } from '../types';
 
-type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
+type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
 
 interface MobileAppProps {
     activePage: Page;

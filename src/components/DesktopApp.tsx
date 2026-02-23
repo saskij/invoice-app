@@ -8,7 +8,7 @@ import InvoicesPage from '../pages/desktop/InvoicesPage';
 import SettingsPage from '../pages/desktop/SettingsPage';
 import type { Invoice } from '../types';
 
-type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
+type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
 
 interface DesktopAppProps {
     activePage: Page;
