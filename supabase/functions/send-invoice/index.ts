@@ -22,17 +22,29 @@ serve(async (req) => {
         }
 
         // 2. Initialize Supabase client to verify the user
-        // Note: SUPABASE_URL and SUPABASE_ANON_KEY are automatically injected into Edge Functions
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error('Supabase internal environment variables are missing')
+        }
+
         const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            supabaseUrl,
+            supabaseAnonKey,
             { global: { headers: { Authorization: authHeader } } }
         )
 
         // 3. Get the user from the JWT
         const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-        if (userError || !user) {
-            throw new Error('Unauthorized')
+
+        if (userError) {
+            console.error('Auth verification failed:', userError.message)
+            throw new Error(`Authentication failed: ${userError.message}`)
+        }
+
+        if (!user) {
+            throw new Error('Authenticated but no user data found')
         }
 
         // 4. Rate Limiting Check
