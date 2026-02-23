@@ -7,11 +7,20 @@ interface SendInvoiceEmailParams {
     pdfBase64: string;
 }
 
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+export function validateEmail(email: string): boolean {
+    return EMAIL_REGEX.test(email);
+}
+
 export async function sendInvoiceEmail({
     invoice,
     company,
     pdfBase64,
 }: SendInvoiceEmailParams): Promise<void> {
+    if (!validateEmail(invoice.client.email)) {
+        throw new Error(`Invalid client email format: ${invoice.client.email}`);
+    }
     const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <h2 style="color: #4f46e5;">You have a new invoice from ${company.name}</h2>

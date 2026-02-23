@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     paymentInfo: '',
     invoicePrefix: 'INV',
     nextInvoiceNumber: 1001,
+    subscriptionStatus: 'free',
+    invoiceLimit: 5,
 };
 
 const DEFAULT_CATALOG: CatalogService[] = [
@@ -53,6 +55,10 @@ interface AppContextType {
     setDraftInvoice: (invoice: Partial<Invoice> | null) => void;
     activePage: 'dashboard' | 'new-invoice' | 'invoices' | 'settings';
     setActivePage: (page: 'dashboard' | 'new-invoice' | 'invoices' | 'settings') => void;
+    currentPage: number;
+    totalCount: number;
+    pageSize: number;
+    fetchPage: (page: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -79,6 +85,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const saved = localStorage.getItem('invoice_app_active_page');
         return (saved as any) || 'dashboard';
     });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const pageSize = 10;
     const [loading, setLoading] = useState(true);
 
     // Sync invoices to localStorage
@@ -136,6 +145,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         paymentInfo: settingsData.paymentInfo || DEFAULT_SETTINGS.paymentInfo,
                         invoicePrefix: settingsData.invoicePrefix || DEFAULT_SETTINGS.invoicePrefix,
                         nextInvoiceNumber: settingsData.nextInvoiceNumber || DEFAULT_SETTINGS.nextInvoiceNumber,
+                        subscriptionStatus: settingsData.subscription_status || DEFAULT_SETTINGS.subscriptionStatus,
+                        invoiceLimit: settingsData.invoice_limit ?? DEFAULT_SETTINGS.invoiceLimit,
                     });
                 }
 
@@ -150,16 +161,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setCatalog(catalogData);
                 }
 
-                // Fetch Invoices
-                const { data: invoicesData, error: invoicesError } = await supabase
+                // Fetch Invoices (Initial Page)
+                const { data: invoicesData, error: invoicesError, count } = await supabase
                     .from('invoices')
-                    .select('*')
+                    .select('*', { count: 'exact' })
                     .eq('user_id', user.id)
-                    .order('createdAt', { ascending: false });
+                    .order('createdAt', { ascending: false })
+                    .range(0, pageSize - 1);
 
                 if (invoicesError) throw invoicesError;
                 if (invoicesData) {
                     setInvoices(invoicesData);
+                }
+                if (count !== null) {
+                    setTotalCount(count);
                 }
             } catch (error: any) {
                 console.error('Error fetching data:', error);
@@ -186,6 +201,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     paymentInfo: newSettings.paymentInfo,
                     invoicePrefix: newSettings.invoicePrefix,
                     nextInvoiceNumber: newSettings.nextInvoiceNumber,
+                    subscription_status: newSettings.subscriptionStatus,
+                    invoice_limit: newSettings.invoiceLimit,
                     updatedAt: new Date().toISOString(),
                 });
             if (error) throw error;
@@ -240,33 +257,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [user]);
 
+    const fetchPage = useCallback(async (page: number) => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, error, count } = await supabase
+                .from('invoices')
+                .select('*', { count: 'exact' })
+                .eq('user_id', user.id)
+                .order('createdAt', { ascending: false })
+                .range(from, to);
+
+            if (error) throw error;
+            if (data) {
+                setInvoices(data);
+                setCurrentPage(page);
+            }
+            if (count !== null) {
+                setTotalCount(count);
+            }
+        } catch (error) {
+            console.error('Error fetching page:', error);
+            toast.error('Failed to load page.');
+        } finally {
+            setLoading(false);
+        }
+    }, [user, pageSize]);
+
     const saveInvoice = useCallback(async (invoice: Invoice) => {
         if (!user) return;
 
-        setInvoices(prev => {
-            const idx = prev.findIndex(i => i.id === invoice.id);
-            if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = invoice;
-                return updated;
-            }
-            return [invoice, ...prev];
-        });
+        // Optimized: Refresh the first page if it's a new invoice, 
+        // or just update the local item if it's an edit of an item already on the page.
+        const isNew = !invoices.find(i => i.id === invoice.id);
 
         try {
             const { error } = await supabase
                 .from('invoices')
                 .upsert({ ...invoice, user_id: user.id, updatedAt: new Date().toISOString() });
             if (error) throw error;
+
+            if (isNew) {
+                // If it's new, go to page 1 to show it
+                await fetchPage(1);
+            } else {
+                // If it was an edit, just refresh current page
+                await fetchPage(currentPage);
+            }
         } catch (error) {
             console.error('Error saving invoice:', error);
             toast.error('Failed to save invoice to cloud.');
         }
-    }, [user]);
+    }, [user, invoices, currentPage, fetchPage]);
 
     const deleteInvoice = useCallback(async (id: string) => {
         if (!user) return;
-        setInvoices(prev => prev.map(i => i.id === id ? { ...i, status: 'deleted', updatedAt: new Date().toISOString() } : i));
         try {
             const { error } = await supabase
                 .from('invoices')
@@ -274,15 +322,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .eq('id', id)
                 .eq('user_id', user.id);
             if (error) throw error;
+            await fetchPage(currentPage);
         } catch (error) {
             console.error('Error deleting invoice:', error);
             toast.error('Failed to delete invoice.');
         }
-    }, [user]);
+    }, [user, currentPage, fetchPage]);
 
     const hardDeleteInvoice = useCallback(async (id: string) => {
         if (!user) return;
-        setInvoices(prev => prev.filter(i => i.id !== id));
         try {
             const { error } = await supabase
                 .from('invoices')
@@ -290,15 +338,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .eq('id', id)
                 .eq('user_id', user.id);
             if (error) throw error;
+            await fetchPage(currentPage);
         } catch (error) {
             console.error('Error permanently deleting invoice:', error);
             toast.error('Failed to delete invoice permanently.');
         }
-    }, [user]);
+    }, [user, currentPage, fetchPage]);
 
     const restoreInvoice = useCallback(async (id: string) => {
         if (!user) return;
-        setInvoices(prev => prev.map(i => i.id === id ? { ...i, status: 'draft', updatedAt: new Date().toISOString() } : i));
         try {
             const { error } = await supabase
                 .from('invoices')
@@ -306,11 +354,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .eq('id', id)
                 .eq('user_id', user.id);
             if (error) throw error;
+            await fetchPage(currentPage);
         } catch (error) {
             console.error('Error restoring invoice:', error);
             toast.error('Failed to restore invoice.');
         }
-    }, [user]);
+    }, [user, currentPage, fetchPage]);
 
     const getNextInvoiceNumber = useCallback(() => {
         const prefix = settings.invoicePrefix || 'INV';
@@ -322,6 +371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newNextNumber = (settings.nextInvoiceNumber || 1001) + 1;
         updateSettings({ ...settings, nextInvoiceNumber: newNextNumber });
     }, [settings, updateSettings]);
+
 
     const uploadCompanyLogo = useCallback(async (file: File): Promise<string | null> => {
         if (!user) return null;
@@ -368,6 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,
             activePage, setActivePage,
+            currentPage, totalCount, pageSize, fetchPage
         }}>
             {children}
         </AppContext.Provider>

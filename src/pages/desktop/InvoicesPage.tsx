@@ -14,7 +14,10 @@ interface InvoicesPageProps {
 const STATUS_OPTS = ['all', 'draft', 'sent', 'paid', 'overdue', 'deleted'] as const;
 
 const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
-    const { invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, settings } = useApp();
+    const {
+        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, settings,
+        currentPage, totalCount, pageSize, fetchPage
+    } = useApp();
     const [filter, setFilter] = useState<string>('all');
     const [search, setSearch] = useState('');
     const [previewInv, setPreviewInv] = useState<Invoice | null>(null);
@@ -175,6 +178,34 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                         </tbody>
                     </table>
                 )}
+            </div>
+
+            {/* Pagination Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, padding: '0 4px' }}>
+                <div style={{ color: '#64748b', fontSize: 13 }}>
+                    Showing <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{invoices.length}</span> of <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{totalCount}</span> invoices
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: 13, marginRight: 8 }}>
+                        Page <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{currentPage}</span> of <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{Math.ceil(totalCount / pageSize) || 1}</span>
+                    </span>
+                    <button
+                        className="btn-secondary"
+                        onClick={() => fetchPage(currentPage - 1)}
+                        disabled={currentPage <= 1}
+                        style={{ padding: '8px 16px', fontSize: 13, opacity: currentPage <= 1 ? 0.5 : 1 }}
+                    >
+                        Previous
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        onClick={() => fetchPage(currentPage + 1)}
+                        disabled={currentPage * pageSize >= totalCount}
+                        style={{ padding: '8px 16px', fontSize: 13, opacity: currentPage * pageSize >= totalCount ? 0.5 : 1 }}
+                    >
+                        Next
+                    </button>
+                </div>
             </div>
 
             {previewInv && (

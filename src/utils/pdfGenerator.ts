@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Invoice, CompanyInfo } from '../types';
+import { sanitizeInput } from './sanitization';
 
 const BRAND_COLOR: [number, number, number] = [79, 70, 229];   // indigo-600
 const DARK_COLOR: [number, number, number] = [15, 23, 42];    // slate-900
@@ -76,22 +77,22 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
-    doc.text(company.name || 'Your Company', textStartX, 52);
+    doc.text(sanitizeInput(company.name) || 'Your Company', textStartX, 52);
 
     // Company contact
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(148, 163, 184);
     const companyLines: string[] = [];
-    if (company.address) companyLines.push(company.address);
+    if (company.address) companyLines.push(sanitizeInput(company.address));
     if (company.city || company.state || company.zip)
-        companyLines.push([company.city, company.state, company.zip].filter(Boolean).join(', '));
-    if (company.phone) companyLines.push(company.phone);
-    if (company.email) companyLines.push(company.email);
-    if (company.website) companyLines.push(company.website);
+        companyLines.push([sanitizeInput(company.city), sanitizeInput(company.state), sanitizeInput(company.zip)].filter(Boolean).join(', '));
+    if (company.phone) companyLines.push(sanitizeInput(company.phone));
+    if (company.email) companyLines.push(sanitizeInput(company.email));
+    if (company.website) companyLines.push(sanitizeInput(company.website));
     doc.text(companyLines.join('  |  '), textStartX, 72);
     if (company.taxId) {
-        doc.text(`Tax ID: ${company.taxId}`, textStartX, 86);
+        doc.text(`Tax ID: ${sanitizeInput(company.taxId)}`, textStartX, 86);
     }
 
     // INVOICE label (top right)
@@ -103,7 +104,7 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(148, 163, 184);
-    doc.text(`#${invoice.invoiceNumber}`, pageWidth - margin, 68, { align: 'right' });
+    doc.text(`#${sanitizeInput(invoice.invoiceNumber)}`, pageWidth - margin, 68, { align: 'right' });
 
     y = 140;
 
@@ -120,16 +121,16 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(...DARK_COLOR);
-    doc.text(invoice.client.name || 'Client Name', margin + 14, y + 36);
+    doc.text(sanitizeInput(invoice.client.name) || 'Client Name', margin + 14, y + 36);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...GRAY_COLOR);
     const clientLines: string[] = [];
-    if (invoice.client.company) clientLines.push(invoice.client.company);
-    if (invoice.client.address) clientLines.push(invoice.client.address);
+    if (invoice.client.company) clientLines.push(sanitizeInput(invoice.client.company));
+    if (invoice.client.address) clientLines.push(sanitizeInput(invoice.client.address));
     if (invoice.client.city || invoice.client.state || invoice.client.zip)
-        clientLines.push([invoice.client.city, invoice.client.state, invoice.client.zip].filter(Boolean).join(', '));
-    if (invoice.client.email) clientLines.push(invoice.client.email);
+        clientLines.push([sanitizeInput(invoice.client.city), sanitizeInput(invoice.client.state), sanitizeInput(invoice.client.zip)].filter(Boolean).join(', '));
+    if (invoice.client.email) clientLines.push(sanitizeInput(invoice.client.email));
     doc.text(clientLines, margin + 14, y + 50);
 
     // Invoice Details box
@@ -138,10 +139,10 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
     doc.roundedRect(rightX, y, halfW, 110, 6, 6, 'F');
 
     const details: [string, string][] = [
-        ['Invoice Number', `#${invoice.invoiceNumber}`],
+        ['Invoice Number', `#${sanitizeInput(invoice.invoiceNumber)}`],
         ['Issue Date', formatDate(invoice.issueDate)],
         ['Due Date', formatDate(invoice.dueDate)],
-        ['Status', invoice.status.toUpperCase()],
+        ['Status', sanitizeInput(invoice.status).toUpperCase()],
     ];
     let dy = y + 18;
     for (const [label, value] of details) {
@@ -165,7 +166,7 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
         head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
         body: invoice.lineItems.map((item, i) => [
             i + 1,
-            item.description,
+            sanitizeInput(item.description),
             item.quantity,
             formatCurrency(item.unitPrice),
             formatCurrency(item.total),
@@ -256,7 +257,8 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
             doc.setFontSize(10);
             doc.setTextColor(...GRAY_COLOR);
 
-            const lines = doc.splitTextToSize(col.content, colWidth);
+            const sanitizedContent = sanitizeInput(col.content);
+            const lines = doc.splitTextToSize(sanitizedContent, colWidth);
             doc.text(lines, startX, y + 14);
 
             const blockHeight = 14 + lines.length * 14;

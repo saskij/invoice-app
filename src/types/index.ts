@@ -19,6 +19,8 @@ export interface AppSettings {
     paymentInfo: string;
     invoicePrefix: string;
     nextInvoiceNumber: number;
+    subscriptionStatus: 'free' | 'pro';
+    invoiceLimit: number;
 }
 
 export interface CatalogService {

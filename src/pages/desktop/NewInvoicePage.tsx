@@ -16,7 +16,7 @@ interface NewInvoicePageProps {
 const emptyClient: InvoiceClient = { name: '', email: '', company: '', address: '', city: '', state: '', zip: '' };
 
 const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
+    const { settings, catalog, invoices, saveInvoice, getNextInvoiceNumber, bumpInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -40,6 +40,9 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [showPreview, setShowPreview] = useState(false);
     const [sending, setSending] = useState(false);
     const [status, setStatus] = useState(initialData?.status || 'draft' as Invoice['status']);
+
+    const nonDeletedInvoices = invoices.filter(i => i.status !== 'deleted');
+    const isLimitReached = !editInvoice && settings.subscriptionStatus === 'free' && nonDeletedInvoices.length >= settings.invoiceLimit;
 
     const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
 
@@ -120,6 +123,10 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     ]);
 
     const handleSave = (newStatus: Invoice['status'] = status) => {
+        if (!editInvoice && isLimitReached) {
+            toast.error(`Limit reached! Your Free plan allows up to ${settings.invoiceLimit} invoices. Please upgrade to Pro for unlimited access.`);
+            return;
+        }
         if (!client.name.trim()) { toast.error('Client name is required.'); return; }
         if (lineItems.length === 0) { toast.error('Add at least one line item.'); return; }
         const inv = { ...buildInvoice(), status: newStatus };
@@ -140,6 +147,10 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     };
 
     const handleSendEmail = async () => {
+        if (!editInvoice && isLimitReached) {
+            toast.error(`Limit reached! Your Free plan allows up to ${settings.invoiceLimit} invoices. Please upgrade to Pro for unlimited access.`);
+            return;
+        }
         if (!client.email.trim()) { toast.error('Client email is required to send invoice.'); return; }
         setSending(true);
         try {
@@ -345,6 +356,26 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                         </div>
                     </div>
                 </div>
+
+                {/* Subscription Limit Warning */}
+                {isLimitReached && (
+                    <div className="glass-card animate-pulse" style={{ padding: 20, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#ef4444' }}>Invoice Limit Reached</h4>
+                                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>
+                                    Your Free plan is limited to {settings.invoiceLimit} invoices. Upgrade to Pro for unlimited invoices.
+                                </p>
+                            </div>
+                            <button className="btn-primary" style={{ marginLeft: 'auto', background: '#ef4444' }} onClick={() => toast.error('Subscription management coming soon!')}>
+                                Upgrade Now
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Right: Summary + Actions */}
@@ -395,12 +426,26 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                     <button className="btn-secondary" onClick={handleDownloadPDF} style={{ justifyContent: 'center' }}>
                         <Download size={15} />Download PDF
                     </button>
-                    <button className="btn-success" onClick={handleSendEmail} disabled={sending} style={{ justifyContent: 'center', opacity: sending ? 0.7 : 1 }}>
+                    <button
+                        className="btn-success"
+                        onClick={handleSendEmail}
+                        disabled={sending || isLimitReached}
+                        style={{ justifyContent: 'center', opacity: (sending || isLimitReached) ? 0.7 : 1 }}
+                    >
                         <Send size={15} />{sending ? 'Sending…' : 'Send to Client'}
                     </button>
                     <div className="divider" />
-                    <button className="btn-primary" onClick={() => handleSave('draft')} style={{ justifyContent: 'center' }}>
-                        <Save size={15} />Save Invoice
+                    <button
+                        className="btn-primary"
+                        onClick={() => handleSave('draft')}
+                        style={{
+                            justifyContent: 'center',
+                            background: isLimitReached ? '#475569' : undefined,
+                            cursor: isLimitReached ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={isLimitReached}
+                    >
+                        <Save size={15} />{isLimitReached ? 'Limit Reached' : 'Save Invoice'}
                     </button>
                 </div>
             </div>
