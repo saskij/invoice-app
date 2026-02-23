@@ -15,12 +15,11 @@ interface DashboardPageMobileProps {
 }
 
 const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate }) => {
-    const { invoices, settings } = useApp();
+    const { dashboardData, settings, invoices } = useApp();
 
-    const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
-    const pendingAmount = invoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + i.total, 0);
-    const overdueAmount = invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + i.total, 0);
-    const paidCount = invoices.filter(i => i.status === 'paid').length;
+    if (!dashboardData) return null;
+
+    const { totalRevenue, pendingAmount, overdueAmount, paidCount, recentInvoices } = dashboardData;
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
@@ -30,8 +29,6 @@ const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate })
         { label: 'Overdue', value: fmt(overdueAmount), icon: AlertCircle, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
         { label: 'Paid Invoices', value: String(paidCount), icon: CheckCircle, color: '#4f46e5', bg: 'rgba(79,70,229,0.15)' },
     ];
-
-    const recentInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
     return (
         <div className="animate-fade-in" style={{ padding: '16px 12px' }}>
@@ -103,7 +100,7 @@ const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate })
                             }}>
                                 <div>
                                     <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 4 }}>
-                                        {inv.client.name}
+                                        {inv.clientName}
                                     </div>
                                     <div style={{ fontSize: 12, color: '#94a3b8', display: 'flex', gap: 8, alignItems: 'center' }}>
                                         <span style={{ color: '#818cf8', fontWeight: 600 }}>#{inv.invoiceNumber}</span>
@@ -115,8 +112,8 @@ const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate })
                                     <div style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 6 }}>
                                         {fmt(inv.total)}
                                     </div>
-                                    <span className={`badge badge-${inv.status}`} style={{ fontSize: 10, padding: '2px 6px' }}>
-                                        {inv.status}
+                                    <span className={`badge badge-${inv.displayStatus}`} style={{ fontSize: 10, padding: '2px 6px' }}>
+                                        {inv.displayStatus}
                                     </span>
                                 </div>
                             </div>

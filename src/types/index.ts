@@ -53,6 +53,21 @@ export interface InvoiceClient {
     zip: string;
 }
 
+export interface Client {
+    id: string;
+    user_id?: string;
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export interface PaymentHistory {
     id: string;
     invoice_id: string;
@@ -83,6 +98,9 @@ export interface Invoice {
     paymentDate?: string;
     balanceDue?: number;
     displayStatus?: InvoiceStatus;
+    client_id?: string;
+    clientName?: string;
+    clientCompany?: string;
     notes: string;
     paymentTerms: string;
     paymentInfo: string;

@@ -124,16 +124,25 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
         doc.setTextColor(...DARK_COLOR);
-        doc.text(sanitizeInput(invoice.client.name) || 'Client Name', margin + 14, y + 36);
+
+        const clientName = invoice.clientName || invoice.client?.name || 'Client Name';
+        const clientCompany = invoice.clientCompany || invoice.client?.company;
+        const clientEmail = invoice.client?.email || '';
+        const clientAddress = invoice.client?.address || '';
+        const clientCity = invoice.client?.city || '';
+        const clientState = invoice.client?.state || '';
+        const clientZip = invoice.client?.zip || '';
+
+        doc.text(sanitizeInput(clientName), margin + 14, y + 36);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(...GRAY_COLOR);
         const clientLines: string[] = [];
-        if (invoice.client.company) clientLines.push(sanitizeInput(invoice.client.company));
-        if (invoice.client.address) clientLines.push(sanitizeInput(invoice.client.address));
-        if (invoice.client.city || invoice.client.state || invoice.client.zip)
-            clientLines.push([sanitizeInput(invoice.client.city), sanitizeInput(invoice.client.state), sanitizeInput(invoice.client.zip)].filter(Boolean).join(', '));
-        if (invoice.client.email) clientLines.push(sanitizeInput(invoice.client.email));
+        if (clientCompany) clientLines.push(sanitizeInput(clientCompany));
+        if (clientAddress) clientLines.push(sanitizeInput(clientAddress));
+        if (clientCity || clientState || clientZip)
+            clientLines.push([sanitizeInput(clientCity), sanitizeInput(clientState), sanitizeInput(clientZip)].filter(Boolean).join(', '));
+        if (clientEmail) clientLines.push(sanitizeInput(clientEmail));
         doc.text(clientLines, margin + 14, y + 50);
 
         // Invoice Details box

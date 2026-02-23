@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import type { Invoice, LineItem, InvoiceClient } from '../../types';
+import type { Invoice, LineItem, Client } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Eye, Download, Send, Save } from 'lucide-react';
+import { Plus, Trash2, Eye, Send, Save, UserPlus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -13,21 +13,25 @@ interface NewInvoicePageMobileProps {
     onSaved?: () => void;
 }
 
-const emptyClient: InvoiceClient = { name: '', email: '', company: '', address: '', city: '', state: '', zip: '' };
+const emptyClient: Client = { id: '', name: '', email: '', company: '', address: '', city: '', state: '', zip: '', phone: '' };
 
 const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, invoices, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice } = useApp();
+    const { settings, catalog, invoices, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient } = useApp();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
 
-    // Use draft if it's the same invoice we are editing or if we are creating new and there's a draft
     const effectiveDraft = (draftInvoice && (editInvoice ? draftInvoice.id === editInvoice.id : !draftInvoice.id)) ? draftInvoice : null;
     const initialData = (editInvoice || effectiveDraft) as Partial<Invoice> | null;
 
     const [invoiceId] = useState(initialData?.id || uuidv4());
     const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || '');
-    const [client, setClient] = useState<InvoiceClient>(initialData?.client || emptyClient);
+
+    // Client selection
+    const [selectedClientId, setSelectedClientId] = useState<string>(initialData?.client_id || '');
+    const [tempClient, setTempClient] = useState<Client>(emptyClient);
+    const [isAddingNewClient, setIsAddingNewClient] = useState(false);
+
     const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
     const [issueDate, setIssueDate] = useState(initialData?.issueDate || today);
     const [dueDate, setDueDate] = useState(initialData?.dueDate || thirtyDays);
@@ -36,25 +40,25 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const [taxRate, setTaxRate] = useState(initialData?.taxRate ?? settings.defaultTaxRate ?? 0);
     const [notes, setNotes] = useState(initialData?.notes || '');
     const [paymentTerms, setPaymentTerms] = useState(initialData?.paymentTerms || settings.defaultPaymentTerms || '');
-    const [paymentInfo, setPaymentInfo] = useState(initialData?.paymentInfo || settings.paymentInfo || '');
+    const [paymentInfo] = useState(initialData?.paymentInfo || settings.paymentInfo || '');
     const [showPreview, setShowPreview] = useState(false);
     const [sending, setSending] = useState(false);
-    const [status, setStatus] = useState(initialData?.status || 'draft' as Invoice['status']);
+    const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
+
+    const [showExtraFields, setShowExtraFields] = useState(false);
 
     const nonDeletedInvoices = invoices.filter(i => i.status !== 'deleted');
     const isLimitReached = !editInvoice && settings.subscriptionStatus === 'free' && nonDeletedInvoices.length >= settings.invoiceLimit;
 
-    const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
+    const activeClient = clients.find(c => c.id === selectedClientId) || (initialData?.client as any as Client) || emptyClient;
 
-    // Calculate discounts
+    const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
     let discountAmount = 0;
     if (discountType === 'percentage') {
         discountAmount = subtotal * (discountValue / 100);
     } else {
         discountAmount = discountValue;
     }
-
-    // Prevent negative totals
     if (discountAmount > subtotal) discountAmount = subtotal;
 
     const discountedSubtotal = subtotal - discountAmount;
@@ -62,6 +66,46 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const total = discountedSubtotal + taxAmount;
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
+    const isDirty = useMemo(() => {
+        const currentData = {
+            selectedClientId,
+            lineItems: JSON.stringify(lineItems),
+            issueDate,
+            dueDate,
+            discountType,
+            discountValue,
+            taxRate,
+            notes,
+            paymentTerms,
+            paymentInfo
+        };
+        const orig = initialData || {};
+        const baseLineItems = JSON.stringify(orig.lineItems || []);
+
+        return currentData.selectedClientId !== (orig.client_id || '') ||
+            currentData.lineItems !== baseLineItems ||
+            currentData.issueDate !== (orig.issueDate || today) ||
+            currentData.dueDate !== (orig.dueDate || thirtyDays) ||
+            currentData.discountType !== (orig.discountType || 'percentage') ||
+            currentData.discountValue !== (orig.discountValue || 0) ||
+            currentData.taxRate !== (orig.taxRate ?? (settings.defaultTaxRate ?? 0)) ||
+            currentData.notes !== (orig.notes || '') ||
+            currentData.paymentTerms !== (orig.paymentTerms || settings.defaultPaymentTerms || '') ||
+            currentData.paymentInfo !== (orig.paymentInfo || settings.paymentInfo || '');
+    }, [selectedClientId, lineItems, issueDate, dueDate, discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, initialData, today, thirtyDays, settings]);
+
+    // Browser unload protection
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirty]);
 
     const addLineItem = useCallback(() => {
         setLineItems(prev => [...prev, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
@@ -94,7 +138,10 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const buildInvoice = (): Invoice => ({
         id: invoiceId,
         invoiceNumber,
-        client,
+        client_id: selectedClientId,
+        client: activeClient as any,
+        clientName: activeClient.name,
+        clientCompany: activeClient.company,
         lineItems,
         issueDate,
         dueDate,
@@ -113,41 +160,38 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
         updatedAt: new Date().toISOString(),
     });
 
-    // Sync draft to context
     useEffect(() => {
         setDraftInvoice(buildInvoice());
     }, [
-        invoiceId, invoiceNumber, client, lineItems, issueDate, dueDate,
+        invoiceId, invoiceNumber, selectedClientId, lineItems, issueDate, dueDate,
         discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, status,
         setDraftInvoice
     ]);
 
     const handleSave = async (newStatus: Invoice['status'] = status) => {
         if (!editInvoice && isLimitReached) {
-            toast.error(`Limit reached! Your Free plan allows up to ${settings.invoiceLimit} invoices. Please upgrade to Pro for unlimited access.`);
+            toast.error(`Limit reached! Upgrade for more.`);
             return;
         }
-        if (!client.name.trim()) { toast.error('Client name is required.'); return; }
-        if (lineItems.length === 0) { toast.error('Add at least one line item.'); return; }
+        if (!selectedClientId) { toast.error('Please select a client.'); return; }
+        if (lineItems.length === 0) { toast.error('Add items.'); return; }
 
         let activeInvoiceNumber = invoiceNumber;
         if (!editInvoice && !activeInvoiceNumber) {
             const reserved = await reserveNextInvoiceNumber();
-            if (!reserved) return; // Error toast already shown in Context
+            if (!reserved) return;
             activeInvoiceNumber = reserved;
             setInvoiceNumber(reserved);
         }
 
-        const inv = { ...buildInvoice(), invoiceNumber: activeInvoiceNumber, status: newStatus };
-        saveInvoice(inv);
+        saveInvoice({ ...buildInvoice(), invoiceNumber: activeInvoiceNumber, status: newStatus });
         setDraftInvoice(null);
-        toast.success(`Invoice ${newStatus === 'draft' ? 'saved as draft' : 'saved'}!`);
         onSaved?.();
     };
 
     const handleDownloadPDF = async () => {
-        if (!client.name.trim() || lineItems.length === 0) {
-            toast.error('Please fill in client info and add line items first.');
+        if (!selectedClientId || lineItems.length === 0) {
+            toast.error('Select client and add items.');
             return;
         }
         await downloadInvoicePDF(buildInvoice(), settings.company);
@@ -155,324 +199,173 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     };
 
     const handleSendEmail = async () => {
-        if (!editInvoice && isLimitReached) {
-            toast.error(`Limit reached! Your Free plan allows up to ${settings.invoiceLimit} invoices. Please upgrade to Pro for unlimited access.`);
-            return;
-        }
-        if (!client.email.trim()) { toast.error('Client email is required to send invoice.'); return; }
+        if (!activeClient.email) { toast.error('Client email required.'); return; }
         setSending(true);
         try {
             const pdfBase64 = await getInvoicePDFBase64(buildInvoice(), settings.company);
-            await sendInvoiceEmail({
-                invoice: buildInvoice(),
-                company: settings.company,
-                pdfBase64
-            });
+            await sendInvoiceEmail({ invoice: buildInvoice(), company: settings.company, pdfBase64 });
             handleSave('sent');
-            toast.success(`Invoice sent to ${client.email}!`);
+            toast.success('Sent!');
         } catch (err: any) {
-            toast.error(err.message || 'Failed to send email.');
+            toast.error('Failed to send.');
         } finally {
             setSending(false);
         }
     };
 
+    const handleCreateClient = async () => {
+        if (!tempClient.name.trim()) { toast.error('Name required.'); return; }
+        const newId = await saveClient({ ...tempClient, id: uuidv4() });
+        if (newId) {
+            setSelectedClientId(newId);
+            setIsAddingNewClient(false);
+            setTempClient(emptyClient);
+            toast.success('Client created.');
+        }
+    };
+
     return (
-        <div className="animate-fade-in" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Main form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-                {/* Invoice meta */}
-                <div className="glass-card" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div>
-                            <label className="label">Invoice Number</label>
-                            <input
-                                className="input-field"
-                                value={invoiceNumber}
-                                onChange={e => setInvoiceNumber(e.target.value)}
-                                placeholder="Auto-generated on save"
-                            />
-                        </div>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <div style={{ flex: 1 }}>
-                                <label className="label">Issue Date</label>
-                                <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <label className="label">Due Date</label>
-                                <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-                            </div>
-                        </div>
+        <div className="animate-fade-in" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Invoice Number & Dates */}
+            <div className="glass-card" style={{ padding: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <label className="label">Invoice #</label>
+                        <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Auto-generated" />
+                    </div>
+                    <div>
+                        <label className="label">Issue Date</label>
+                        <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="label">Due Date</label>
+                        <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
                 </div>
+            </div>
 
-                {/* Client info */}
-                <div className="glass-card" style={{ padding: 20 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bill To</h3>
+            {/* Client selection */}
+            <div className="glass-card" style={{ padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Bill To</h3>
+                    <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setIsAddingNewClient(!isAddingNewClient)}>
+                        {isAddingNewClient ? <X size={14} /> : <><UserPlus size={14} /> New</>}
+                    </button>
+                </div>
+
+                {!isAddingNewClient ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ position: 'relative' }}>
+                            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                            <select className="input-field" style={{ paddingLeft: 32, fontSize: 13 }} value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)}>
+                                <option value="">— Select client —</option>
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        {activeClient.id && (
+                            <div style={{ padding: 12, borderRadius: 10, border: '1px solid rgba(99,102,241,0.1)', background: 'rgba(15,23,42,0.2)' }}>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}>{activeClient.name}</div>
+                                <div style={{ fontSize: 12, color: '#94a3b8' }}>{activeClient.company}</div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {([
-                            { label: 'Client Name *', field: 'name', span: false, placeholder: 'Jane Smith' },
-                            { label: 'Company', field: 'company', span: false, placeholder: 'Acme Corp' },
-                            { label: 'Email Address', field: 'email', span: true, placeholder: 'jane@acme.com' },
-                            { label: 'Street Address', field: 'address', span: true, placeholder: '456 Oak Ave' },
-                            { label: 'City', field: 'city', span: false, placeholder: 'Los Angeles' },
-                            { label: 'State / ZIP', field: 'state', span: false, placeholder: 'CA 90001' },
-                        ] as { label: string; field: keyof InvoiceClient; span: boolean; placeholder: string }[]).map(f => (
-                            <div key={f.field} style={f.span ? { gridColumn: '1 / -1' } : {}}>
-                                <label className="label">{f.label}</label>
-                                <input
-                                    className="input-field"
-                                    value={client[f.field]}
-                                    onChange={e => setClient(prev => ({ ...prev, [f.field]: e.target.value }))}
-                                    placeholder={f.placeholder}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Line items */}
-                <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Line Items</h3>
-                        <button className="btn-primary" style={{ padding: '7px 16px', fontSize: 13 }} onClick={addLineItem}>
-                            <Plus size={14} />Add Item
-                        </button>
-                    </div>
-
-                    {lineItems.length === 0 ? (
-                        <div style={{ padding: 32, textAlign: 'center', color: '#475569', fontSize: 13 }}>
-                            No line items yet. Click "Add Item" to start.
-                        </div>
-                    ) : (
-                        <>
-                            {lineItems.map((item, i) => (
-                                <div key={item.id} style={{
-                                    display: 'flex', flexDirection: 'column', gap: 10,
-                                    padding: '16px 20px',
-                                    borderTop: i === 0 ? 'none' : '1px solid rgba(99,102,241,0.08)',
-                                    background: i % 2 ? 'rgba(15,23,42,0.2)' : 'transparent',
-                                }}>
-                                    {/* Description + catalog selector */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                        <div style={{ position: 'relative' }}>
-                                            <select
-                                                className="input-field"
-                                                style={{ fontSize: 12, padding: '7px 28px 7px 10px', color: item.catalogServiceId ? '#a5b4fc' : '#64748b' }}
-                                                value={item.catalogServiceId || ''}
-                                                onChange={e => applyFromCatalog(item.id, e.target.value)}
-                                            >
-                                                <option value="">— Pick from catalog —</option>
-                                                {catalog.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name} (${s.defaultPrice}/{s.unit})</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <input
-                                            className="input-field"
-                                            style={{ fontSize: 13 }}
-                                            value={item.description}
-                                            onChange={e => updateLineItem(item.id, 'description', e.target.value)}
-                                            placeholder="Custom description…"
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <input
-                                                className="input-field"
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={e => updateLineItem(item.id, 'quantity', Number(e.target.value))}
-                                                placeholder="Qty"
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1, position: 'relative' }}>
-                                            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 13 }}>$</span>
-                                            <input
-                                                className="input-field"
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                style={{ paddingLeft: 22 }}
-                                                value={item.unitPrice}
-                                                onChange={e => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
-                                                placeholder="Price"
-                                            />
-                                        </div>
-                                        <div style={{ fontWeight: 700, color: '#a5b4fc', fontSize: 14, flex: 1, textAlign: 'right', paddingRight: 4 }}>
-                                            {fmt(item.total)}
-                                        </div>
-                                        <button className="btn-danger" style={{ padding: '7px 8px', justifyContent: 'center' }} onClick={() => removeLineItem(item.id)}>
-                                            <Trash2 size={13} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </>
-                    )}
-
-                    {/* Discounts & Tax */}
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '16px 20px', borderTop: '1px solid rgba(99,102,241,0.1)', gap: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                            <label className="label" style={{ margin: 0 }}>Discount</label>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                                <select
-                                    className="input-field"
-                                    style={{ width: 60, padding: '8px', textAlign: 'center' }}
-                                    value={discountType}
-                                    onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                                >
-                                    <option value="percentage">%</option>
-                                    <option value="fixed">$</option>
-                                </select>
-                                <input
-                                    className="input-field"
-                                    type="number"
-                                    min="0"
-                                    step={discountType === 'percentage' ? "1" : "0.01"}
-                                    style={{ width: 90 }}
-                                    value={discountValue}
-                                    onChange={e => setDiscountValue(Number(e.target.value))}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                            <label className="label" style={{ margin: 0 }}>Tax %</label>
-                            <input
-                                className="input-field"
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                style={{ width: 160 }}
-                                value={taxRate}
-                                onChange={e => setTaxRate(Number(e.target.value))}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Notes */}
-                <div className="glass-card" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div>
-                            <label className="label">Notes (Internal or Client-facing)</label>
-                            <textarea className="input-field" style={{ minHeight: 80 }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any special notes for this invoice…" />
-                        </div>
-                        <div>
-                            <label className="label">Payment Terms</label>
-                            <textarea className="input-field" style={{ minHeight: 80 }} value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} placeholder="Payment due within 30 days…" />
-                        </div>
-                        <div>
-                            <label className="label">Payment Instructions (How to pay - Zelle, Venmo, etc.)</label>
-                            <textarea className="input-field" style={{ minHeight: 80 }} value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="E.g. Please send Zelle to email@address.com..." />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Subscription Limit Warning */}
-                {isLimitReached && (
-                    <div className="glass-card animate-pulse" style={{ padding: 16, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
-                                    <Trash2 size={16} />
-                                </div>
-                                <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#ef4444' }}>Invoice Limit Reached</h4>
-                            </div>
-                            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
-                                Your Free plan is limited to {settings.invoiceLimit} invoices. Upgrade to Pro for unlimited invoices.
-                            </p>
-                            <button className="btn-primary" style={{ background: '#ef4444', width: '100%', justifyContent: 'center' }} onClick={() => toast.error('Subscription management coming soon!')}>
-                                Upgrade Now
-                            </button>
-                        </div>
+                        <input className="input-field" value={tempClient.name} onChange={e => setTempClient({ ...tempClient, name: e.target.value })} placeholder="Name *" />
+                        <input className="input-field" value={tempClient.company} onChange={e => setTempClient({ ...tempClient, company: e.target.value })} placeholder="Company" />
+                        <input className="input-field" value={tempClient.email} onChange={e => setTempClient({ ...tempClient, email: e.target.value })} placeholder="Email" />
+                        <button className="btn-primary w-full justify-center" onClick={handleCreateClient}>Create Client</button>
                     </div>
                 )}
             </div>
 
-            {/* Summary + Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Totals */}
-                <div className="glass-card" style={{ padding: 20 }}>
-                    <h3 style={{ margin: '0 0 18px', fontSize: 14, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Summary</h3>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(99,102,241,0.08)', fontSize: 14, color: '#94a3b8' }}>
-                        <span>Subtotal</span>
-                        <span style={{ fontWeight: 600, color: '#c7d2fe' }}>{fmt(subtotal)}</span>
-                    </div>
-
-                    {discountAmount > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(99,102,241,0.08)', fontSize: 14, color: '#94a3b8' }}>
-                            <span>Discount {discountType === 'percentage' ? `(${discountValue}%)` : ''}</span>
-                            <span style={{ fontWeight: 600, color: '#f87171' }}>-{fmt(discountAmount)}</span>
+            {/* Line items */}
+            <div className="glass-card" style={{ padding: 0 }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Items</h3>
+                    <button className="btn-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={addLineItem}><Plus size={14} />Add Item</button>
+                </div>
+                {lineItems.map((item, i) => (
+                    <div key={item.id} style={{ padding: '16px', borderTop: i === 0 ? 'none' : '1px solid rgba(99,102,241,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <select
+                                className="input-field"
+                                style={{ flex: 1, fontSize: 12, height: 36 }}
+                                value={item.catalogServiceId || ''}
+                                onChange={e => applyFromCatalog(item.id, e.target.value)}
+                            >
+                                <option value="">— Pick from catalog —</option>
+                                {catalog.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                            <button className="btn-danger" style={{ padding: 8, height: 36 }} onClick={() => removeLineItem(item.id)}><Trash2 size={16} /></button>
                         </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(99,102,241,0.08)', fontSize: 14, color: '#94a3b8' }}>
-                        <span>{`Tax (${taxRate}%)`}</span>
-                        <span style={{ fontWeight: 600, color: '#c7d2fe' }}>{fmt(taxAmount)}</span>
+                        <input className="input-field" value={item.description} onChange={e => updateLineItem(item.id, 'description', e.target.value)} placeholder="Description" />
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <input className="input-field" style={{ width: 60 }} type="number" value={item.quantity} onChange={e => updateLineItem(item.id, 'quantity', Number(e.target.value))} />
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 12 }}>$</span>
+                                <input className="input-field" style={{ paddingLeft: 18 }} type="number" value={item.unitPrice} onChange={e => updateLineItem(item.id, 'unitPrice', Number(e.target.value))} />
+                            </div>
+                            <div style={{ fontWeight: 700, color: '#a5b4fc', minWidth: 60, textAlign: 'right' }}>{fmt(item.total)}</div>
+                        </div>
                     </div>
+                ))}
+            </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0 0', fontSize: 20, fontWeight: 800, color: '#e2e8f0', letterSpacing: '-0.02em' }}>
-                        <span>Total</span>
-                        <span style={{ color: '#818cf8' }}>{fmt(total)}</span>
+            {/* Extra Fields Toggle */}
+            <div className="glass-card" style={{ padding: 12, cursor: 'pointer' }} onClick={() => setShowExtraFields(!showExtraFields)}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>Discounts, Tax & Notes {isDirty && <span style={{ color: '#fbbf24', marginLeft: 8 }}>• Unsaved</span>}</span>
+                    {showExtraFields ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+            </div>
+
+            {showExtraFields && (
+                <div className="animate-slide-down flex flex-col gap-4">
+                    <div className="glass-card" style={{ padding: 16 }}>
+                        <label className="label">Discount</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <select className="input-field" style={{ width: 80 }} value={discountType} onChange={e => setDiscountType(e.target.value as any)}>
+                                <option value="percentage">%</option>
+                                <option value="fixed">$</option>
+                            </select>
+                            <input className="input-field" type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} />
+                        </div>
+                        <label className="label mt-4">Tax %</label>
+                        <input className="input-field" type="number" value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} />
+                    </div>
+                    <div className="glass-card" style={{ padding: 16 }}>
+                        <label className="label">Notes</label>
+                        <textarea className="input-field mb-4" rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
+                        <label className="label">Payment Terms</label>
+                        <textarea className="input-field" rows={2} value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} />
                     </div>
                 </div>
+            )}
 
-                {/* Status */}
-                <div className="glass-card" style={{ padding: 20 }}>
-                    <label className="label">Invoice Status</label>
-                    <select className="input-field" value={status} onChange={e => setStatus(e.target.value as Invoice['status'])}>
-                        <option value="draft">Draft</option>
-                        <option value="sent">Sent</option>
-                        <option value="paid">Paid</option>
-                        <option value="overdue">Overdue</option>
-                    </select>
+            {/* Floating Actions / Summary */}
+            <div style={{ height: 80 }} /> {/* Spacer */}
+            <div style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0,
+                background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(12px)',
+                borderTop: '1px solid rgba(99, 102, 241, 0.2)',
+                padding: '12px 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                zIndex: 50
+            }}>
+                <div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' }}>Total Due</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: '#818cf8' }}>{fmt(total)}</div>
                 </div>
-
-                {/* Actions */}
-                <div className="glass-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <button className="btn-secondary" onClick={() => setShowPreview(true)} style={{ justifyContent: 'center' }}>
-                        <Eye size={15} />Preview Invoice
-                    </button>
-                    <button className="btn-secondary" onClick={handleDownloadPDF} style={{ justifyContent: 'center' }}>
-                        <Download size={15} />Download PDF
-                    </button>
-                    <button
-                        className="btn-success"
-                        onClick={handleSendEmail}
-                        disabled={sending || isLimitReached}
-                        style={{ justifyContent: 'center', opacity: (sending || isLimitReached) ? 0.7 : 1 }}
-                    >
-                        <Send size={15} />{sending ? 'Sending…' : 'Send to Client'}
-                    </button>
-                    <div className="divider" />
-                    <button
-                        className="btn-primary"
-                        onClick={() => handleSave('draft')}
-                        style={{
-                            justifyContent: 'center',
-                            background: isLimitReached ? '#475569' : undefined,
-                            cursor: isLimitReached ? 'not-allowed' : 'pointer'
-                        }}
-                        disabled={isLimitReached}
-                    >
-                        <Save size={15} />{isLimitReached ? 'Limit Reached' : 'Save Invoice'}
-                    </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-secondary" style={{ padding: 10 }} onClick={() => setShowPreview(true)}><Eye size={18} /></button>
+                    <button className="btn-primary" style={{ padding: '10px 16px' }} onClick={() => handleSave('draft')}><Save size={18} /> Save</button>
+                    <button className="btn-success" style={{ padding: 10 }} onClick={handleSendEmail} disabled={sending}><Send size={18} /></button>
                 </div>
             </div>
 
             {showPreview && (
-                <InvoicePreviewModal
-                    invoice={buildInvoice()}
-                    company={settings.company}
-                    onClose={() => setShowPreview(false)}
-                    onDownload={handleDownloadPDF}
-                />
+                <InvoicePreviewModal invoice={buildInvoice()} company={settings.company} onClose={() => setShowPreview(false)} onDownload={handleDownloadPDF} />
             )}
         </div>
     );

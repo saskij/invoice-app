@@ -15,12 +15,11 @@ interface DashboardPageProps {
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
-    const { invoices, settings } = useApp();
+    const { dashboardData, settings, invoices } = useApp();
 
-    const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
-    const pendingAmount = invoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + i.total, 0);
-    const overdueAmount = invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + i.total, 0);
-    const paidCount = invoices.filter(i => i.status === 'paid').length;
+    if (!dashboardData) return null;
+
+    const { totalRevenue, pendingAmount, overdueAmount, paidCount, recentInvoices } = dashboardData;
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
@@ -30,8 +29,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         { label: 'Overdue', value: fmt(overdueAmount), icon: AlertCircle, color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
         { label: 'Paid Invoices', value: String(paidCount), icon: CheckCircle, color: '#4f46e5', bg: 'rgba(79,70,229,0.15)' },
     ];
-
-    const recentInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
     return (
         <div className="animate-fade-in" style={{ padding: 28 }}>
@@ -105,8 +102,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                                 <tr key={inv.id} style={{ borderTop: '1px solid rgba(99,102,241,0.08)', background: i % 2 ? 'rgba(15,23,42,0.2)' : 'transparent' }}>
                                     <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#818cf8' }}>#{inv.invoiceNumber}</td>
                                     <td style={{ padding: '14px 20px', fontSize: 13, color: '#e2e8f0' }}>
-                                        <div style={{ fontWeight: 600 }}>{inv.client.name}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.client.company}</div>
+                                        <div style={{ fontWeight: 600 }}>{inv.clientName}</div>
+                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.clientCompany}</div>
                                     </td>
                                     <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>
                                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.total)}
@@ -115,7 +112,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                                         {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                                     </td>
                                     <td style={{ padding: '14px 20px' }}>
-                                        <span className={`badge badge-${inv.status}`}>{inv.status}</span>
+                                        <span className={`badge badge-${inv.displayStatus}`}>{inv.displayStatus}</span>
                                     </td>
                                 </tr>
                             ))}
