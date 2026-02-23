@@ -54,25 +54,36 @@ export async function sendInvoiceEmail({
         console.log('[ES] JWT Expiry:', new Date(session.expires_at! * 1000).toLocaleString());
     }
 
+    console.log('[ES] Attempting to invoke Edge Function "send-invoice"...');
+
     try {
         const { data, error } = await supabase.functions.invoke('send-invoice', {
             body: payload
         });
 
         if (error) {
-            console.error('[ES] Supabase invoke error:', error);
-            throw new Error(error.message || 'Supabase Function invocation failed');
+            console.error('[ES] Supabase Function Error Object:', error);
+
+            // Extract details if it's a FunctionsHttpError
+            let detail = '';
+            if ((error as any).context) {
+                try {
+                    // Try to peek into the raw response if available
+                    console.log('[ES] Error context found, attempting to inspect...');
+                } catch (e) { }
+            }
+
+            throw new Error(`${error.message}${detail}`);
         }
 
-        // The Edge Function now returns errors in the data body with 200 OK to avoid masking
         if (data?.error) {
-            console.error('[ES] Edge Function logic error:', data.error);
+            console.error('[ES] Edge Function Logic Error:', data.error);
             throw new Error(data.error);
         }
 
-        console.log('[ES] Email sent successfully:', data);
+        console.log('[ES] Email successfully delivered to Edge Function!', data);
     } catch (err: any) {
-        console.error('[ES] Network or Logic error:', err);
+        console.error('[ES] Final Error Catch:', err);
         throw err;
     }
 }
