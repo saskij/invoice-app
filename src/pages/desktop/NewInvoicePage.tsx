@@ -219,7 +219,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
             handleSave('sent');
             toast.success('Email sent successfully!');
         } catch (err: any) {
-            toast.error('Failed to send email.');
+            toast.error(err.message || 'Failed to send email.');
         } finally {
             setSending(false);
         }

@@ -151,8 +151,12 @@ serve(async (req) => {
         )
 
     } catch (error: any) {
+        console.error('Edge Function Error:', error.message);
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({
+                error: error.message,
+                details: error.stack
+            }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400
