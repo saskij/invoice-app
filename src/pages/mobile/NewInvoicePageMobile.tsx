@@ -141,12 +141,10 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
 
     const handleSendEmail = async () => {
         if (!client.email.trim()) { toast.error('Client email is required to send invoice.'); return; }
-        if (!settings.resend.apiKey.trim()) { toast.error('Configure Resend API Key in Settings first.'); return; }
         setSending(true);
         try {
             const pdfBase64 = await getInvoicePDFBase64(buildInvoice(), settings.company);
             await sendInvoiceEmail({
-                config: settings.resend,
                 invoice: buildInvoice(),
                 company: settings.company,
                 pdfBase64
@@ -154,7 +152,7 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
             handleSave('sent');
             toast.success(`Invoice sent to ${client.email}!`);
         } catch (err: any) {
-            toast.error(err.message || 'Failed to send email. Check Resend settings.');
+            toast.error(err.message || 'Failed to send email.');
         } finally {
             setSending(false);
         }

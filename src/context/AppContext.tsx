@@ -18,9 +18,6 @@ const DEFAULT_SETTINGS: AppSettings = {
         logoUrl: '',
         taxId: '',
     },
-    resend: {
-        apiKey: '',
-    },
     defaultTaxRate: 0,
     defaultPaymentTerms: 'Payment due within 30 days of invoice date.',
     paymentInfo: '',
@@ -134,7 +131,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (settingsData) {
                     setSettings({
                         company: settingsData.company || DEFAULT_SETTINGS.company,
-                        resend: settingsData.resend || DEFAULT_SETTINGS.resend,
                         defaultTaxRate: settingsData.defaultTaxRate ?? DEFAULT_SETTINGS.defaultTaxRate,
                         defaultPaymentTerms: settingsData.defaultPaymentTerms || DEFAULT_SETTINGS.defaultPaymentTerms,
                         paymentInfo: settingsData.paymentInfo || DEFAULT_SETTINGS.paymentInfo,
@@ -185,7 +181,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .upsert({
                     user_id: user.id,
                     company: newSettings.company,
-                    resend: newSettings.resend,
                     defaultTaxRate: newSettings.defaultTaxRate,
                     defaultPaymentTerms: newSettings.defaultPaymentTerms,
                     paymentInfo: newSettings.paymentInfo,

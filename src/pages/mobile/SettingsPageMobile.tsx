@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { AppSettings, CatalogService } from '../../types';
-import { Save, Plus, Trash2, Briefcase, Mail, Building2, Tag, LogOut } from 'lucide-react';
+import { Save, Plus, Trash2, Briefcase, Building2, Tag, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -19,7 +19,7 @@ const SettingsPageMobile: React.FC = () => {
     const [newService, setNewService] = useState<Omit<CatalogService, 'id'>>(defaultNewService);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editBuf, setEditBuf] = useState<CatalogService | null>(null);
-    const [activeTab, setActiveTab] = useState<'company' | 'catalog' | 'emailjs'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'catalog'>('company');
 
     const saveSettings = () => {
         updateSettings(localSettings);
@@ -32,7 +32,6 @@ const SettingsPageMobile: React.FC = () => {
             company: { ...prev.company, [field]: value },
         }));
     };
-
 
     const handleSettingsChange = (field: string, value: string | number) => {
         setLocalSettings(prev => ({ ...prev, [field]: value }));
@@ -57,17 +56,9 @@ const SettingsPageMobile: React.FC = () => {
         toast.success('Service added to catalog!');
     };
 
-    const handleResendChange = (field: string, value: string) => {
-        setLocalSettings(prev => ({
-            ...prev,
-            resend: { ...prev.resend, [field]: value },
-        }));
-    };
-
     const tabs = [
         { id: 'company', label: 'Company Info', icon: Building2 },
         { id: 'catalog', label: 'Service Catalog', icon: Tag },
-        { id: 'resend', label: 'Email (Resend)', icon: Mail },
     ] as const;
 
     return (
@@ -264,36 +255,6 @@ const SettingsPageMobile: React.FC = () => {
                                 </div>
                             ))
                         )}
-                    </div>
-                </div>
-            )}
-
-            {/* ── Resend ── */}
-            {activeTab === 'resend' as any && (
-                <div className="glass-card animate-slide-in" style={{ padding: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <Mail size={18} color="#4f46e5" />
-                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>Resend Email API</h2>
-                    </div>
-                    <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 20px' }}>
-                        Configure <a href="https://resend.com" target="_blank" rel="noreferrer" style={{ color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Resend</a> to send elegant emails with PDF attachments. Create a free account, generate an API key, and paste it below.
-                    </p>
-
-                    <div style={{ display: 'grid', gap: 18 }}>
-                        <div>
-                            <label className="label">Resend API Key</label>
-                            <input
-                                className="input-field"
-                                value={localSettings.resend?.apiKey || ''}
-                                onChange={e => handleResendChange('apiKey', e.target.value)}
-                                placeholder="re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                type="password"
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="btn-primary" onClick={saveSettings}><Save size={15} />Save Resend Config</button>
                     </div>
                 </div>
             )}

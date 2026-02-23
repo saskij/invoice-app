@@ -11,13 +11,9 @@ export interface CompanyInfo {
     taxId: string;
 }
 
-export interface ResendConfig {
-    apiKey: string;
-}
 
 export interface AppSettings {
     company: CompanyInfo;
-    resend: ResendConfig;
     defaultTaxRate: number;
     defaultPaymentTerms: string;
     paymentInfo: string;

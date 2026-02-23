@@ -38,12 +38,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
 
     const handleSendEmail = async (inv: Invoice) => {
         if (!inv.client.email.trim()) { toast.error('Client email is missing.'); return; }
-        if (!settings.resend.apiKey) { toast.error('Configure Resend API Key in Settings first.'); return; }
         setSending(inv.id);
         try {
             const pdfBase64 = await getInvoicePDFBase64(inv, settings.company);
             await sendInvoiceEmail({
-                config: settings.resend,
                 invoice: inv,
                 company: settings.company,
                 pdfBase64
@@ -51,7 +49,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
             saveInvoice({ ...inv, status: 'sent', updatedAt: new Date().toISOString() });
             toast.success(`Invoice sent to ${inv.client.email}!`);
         } catch (err: any) {
-            toast.error(err.message || 'Email failed. Check EmailJS settings.');
+            toast.error(err.message || 'Email failed.');
         } finally {
             setSending(null);
         }
