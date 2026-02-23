@@ -50,19 +50,12 @@ export async function sendInvoiceEmail({
     });
 
     if (error) {
-        const errorMsg = error.message || 'Supabase Function invocation error';
-        console.error('[ES] Supabase error:', error);
-        Sentry.captureException(new Error(errorMsg), {
-            extra: { invoiceNumber: invoice.invoiceNumber, clientEmail: recipientEmail, supabaseError: error }
-        });
-        throw new Error(errorMsg);
+        console.error('[ES] Supabase invoke error:', error);
+        throw new Error(error.message || 'Supabase Function invocation failed (Check internet/connection)');
     }
 
     if (data?.error) {
         console.error('[ES] Edge Function logic error:', data.error);
-        Sentry.captureException(new Error(data.error), {
-            extra: { invoiceNumber: invoice.invoiceNumber, clientEmail: recipientEmail, dataError: data.error }
-        });
         throw new Error(data.error);
     }
 }
