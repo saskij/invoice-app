@@ -7,206 +7,65 @@ const corsHeaders = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
 serve(async (req) => {
-    console.log(`[SF] Incoming request: ${req.method} ${new URL(req.url).pathname}`);
-
-    // 1. Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
-    }
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
     try {
-        // 2. Validate Environment Variables (Diagnostic Mode)
-        const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-        const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-        const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+        const authHeader = req.headers.get('Authorization')!;
+        const supabaseClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            { global: { headers: { Authorization: authHeader } } }
+        );
 
-        if (!RESEND_API_KEY) {
-            console.error('[SF] Diagnostic Failure: RESEND_API_KEY is missing');
-            return new Response(
-                JSON.stringify({ error: 'RESEND_API_KEY is not configured in Supabase Secrets' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) throw new Error('Unauthorized');
+
+        const { to, subject, html, pdfBase64, filename } = await req.json();
+
+        // 1. Get API Key from DB or ENV
+        const { data: settings } = await supabaseClient.from('settings').select('resend').eq('user_id', user.id).single();
+        const apiKey = settings?.resend?.apiKey || Deno.env.get('RESEND_API_KEY');
+
+        if (!apiKey) {
+            return new Response(JSON.stringify({ 
+                success: false, 
+                error: 'Resend API key is missing. Please go to Settings and enter your API key.' 
+            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
 
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            console.error('[SF] Diagnostic Failure: Supabase internal keys are missing');
-            return new Response(
-                JSON.stringify({ error: 'Internal Supabase configuration error' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            );
-        }
-
-        // 3. Get the authorization header
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-            console.error('[SF] Authentication Failure: No Authorization header');
-            return new Response(
-                JSON.stringify({ error: 'No authorization header provided' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-            );
-        }
-
-        // 4. Initialize Supabase client to verify the user
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            global: { headers: { Authorization: authHeader } }
-        });
-
-        // 5. Get the user from the JWT
-        const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-        if (userError || !user) {
-            console.error('[SF] Authentication Failure:', userError?.message || 'User not found');
-            return new Response(
-                JSON.stringify({ error: `Unauthorized: ${userError?.message || 'Invalid token'}` }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-            );
-        }
-
-        console.log(`[SF] Authorized user: ${user.email} (${user.id})`);
-
-        // 6. Parse and Log Request Body
-        let body;
-        try {
-            body = await req.json();
-            console.log('[SF] Request body received:', JSON.stringify(body, null, 2));
-        } catch (e) {
-            console.error('[SF] Payload Error: Invalid JSON');
-            return new Response(
-                JSON.stringify({ error: 'Invalid JSON payload' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            );
-        }
-
-        const { to, subject, html, pdfBase64, filename } = body;
-
-        // 7. Validate Required Fields
-        if (!to || !subject || !html) {
-            return new Response(
-                JSON.stringify({ error: 'Missing required fields: to, subject, or html' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            );
-        }
-
-        // 8. Validate Email Format
-        const emailsToValidate = Array.isArray(to) ? to : [to];
-        for (const email of emailsToValidate) {
-            if (!EMAIL_REGEX.test(email)) {
-                return new Response(
-                    JSON.stringify({ error: `Invalid email format: ${email}` }),
-                    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-                );
-            }
-        }
-
-        // 9. Fetch user's Resend API key from settings
-        console.log(`[SF] Fetching settings for user: ${user.id}`);
-        const { data: settings, error: settingsError } = await supabaseClient
-            .from('settings')
-            .select('resend')
-            .eq('user_id', user.id)
-            .single();
-
-        if (settingsError) {
-            console.warn('[SF] Settings lookup warning:', settingsError.message);
-        }
-
-        const userResendKey = settings?.resend?.apiKey;
-        const finalResendKey = userResendKey || RESEND_API_KEY;
-
-        if (!finalResendKey) {
-            console.error('[SF] Configuration Error: No Resend API key found for user or system');
-            return new Response(
-                JSON.stringify({ error: 'Resend API key is not configured. Please add it in your Settings.' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            );
-        }
-
-        // 10. Send email via Resend API
-        console.log(`[SF] Attempting to send email to: ${to} (Key source: ${userResendKey ? 'User Settings' : 'System Default'})`);
-        const resendResponse = await fetch('https://api.resend.com/emails', {
+        // 2. Call Resend
+        const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${finalResendKey}`,
-            },
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 from: 'Invoices <onboarding@resend.dev>',
                 to: Array.isArray(to) ? to : [to],
-                subject: subject,
-                html: html,
-                attachments: pdfBase64 ? [
-                    {
-                        filename: filename || 'invoice.pdf',
-                        content: pdfBase64,
-                    }
-                ] : [],
-            }),
+                subject,
+                html,
+                attachments: pdfBase64 ? [{ filename: filename || 'invoice.pdf', content: pdfBase64 }] : []
+            })
         });
 
-        // 11. Process Resend API response
-        let resData;
-        const responseText = await resendResponse.text();
-        try {
-            resData = JSON.parse(responseText);
-        } catch (e) {
-            resData = { message: responseText };
+        const resData = await response.json();
+
+        if (!response.ok) {
+            let error = resData.message || 'Resend API error';
+            if (response.status === 401) error = 'Invalid Resend API Key. Please update it in your Settings.';
+            if (response.status === 403) error = 'Resend Sandbox restriction: You can only send to your own email until you verify a domain.';
+            
+            return new Response(JSON.stringify({ success: false, error, details: resData }), 
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
 
-        console.log('[SF] Resend API Response Status:', resendResponse.status);
-        console.log('[SF] Resend API Response Data:', JSON.stringify(resData, null, 2));
+        // 3. Log and return
+        await supabaseClient.from('email_logs').insert({ user_id: user.id, sent_to: String(to), subject });
 
-        if (!resendResponse.ok) {
-            let errorMessage = resData.message || resData.error || 'Failed to send email via Resend';
-
-            // Special handling for common Resend Sandbox/Key errors
-            if (resendResponse.status === 403 && (errorMessage.includes('onboarding@resend.dev') || errorMessage.includes('restricted'))) {
-                errorMessage = 'Resend Sandbox restriction: You can only send to your own verified email until you add a custom domain in Resend.';
-            } else if (resendResponse.status === 401) {
-                errorMessage = 'Invalid Resend API Key. Please check your Settings.';
-            }
-
-            console.error('[SF] Resend Error:', errorMessage);
-
-            return new Response(
-                JSON.stringify({
-                    success: false,
-                    error: errorMessage,
-                    details: resData,
-                    status: resendResponse.status
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-            );
-        }
-
-        // 12. Log successful send to DB
-        try {
-            const { error: logError } = await supabaseClient.from('email_logs').insert({
-                user_id: user.id,
-                sent_to: Array.isArray(to) ? to.join(', ') : to,
-                subject: subject
-            });
-            if (logError) console.warn('[SF] DB Logging Warning:', logError.message);
-        } catch (dbError) {
-            console.error('[SF] DB Logging Exception:', dbError);
-        }
-
-        return new Response(
-            JSON.stringify({ success: true, data: resData }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        return new Response(JSON.stringify({ success: true, data: resData }), 
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
     } catch (err: any) {
-        console.error('[SF] Global Exception Catch:', err.message);
-        console.error(err.stack);
-        return new Response(
-            JSON.stringify({
-                error: 'Internal Server Error',
-                message: err.message,
-                details: 'See Supabase Edge Function logs for stack trace'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
+        return new Response(JSON.stringify({ success: false, error: err.message }), 
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 });

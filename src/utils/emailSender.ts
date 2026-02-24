@@ -62,27 +62,16 @@ export async function sendInvoiceEmail({
         });
 
         if (error) {
-            console.error('[ES] Supabase Function Error Object:', error);
-
-            // Extract details if it's a FunctionsHttpError
-            let detail = '';
-            if ((error as any).context) {
-                try {
-                    // Try to peek into the raw response if available
-                    console.log('[ES] Error context found, attempting to inspect...');
-                } catch (e) { }
-            }
-
-            throw new Error(`${error.message}${detail}`);
+            console.error('[ES] Supabase Invoke Error:', error);
+            throw new Error(`Connection Error: ${error.message}`);
         }
 
-        if (data?.success === false || data?.error) {
-            const errorMsg = data.error || 'Unknown error from Edge Function';
-            console.error('[ES] Edge Function Logic Error:', errorMsg, data);
-            throw new Error(errorMsg);
+        if (data?.success === false) {
+            console.error('[ES] Edge Function Business Error:', data.error, data.details);
+            throw new Error(data.error || 'Failed to send email');
         }
 
-        console.log('[ES] Email successfully delivered to Edge Function!', data);
+        console.log('[ES] Email successfully delivered!', data);
     } catch (err: any) {
         console.error('[ES] Final Error Catch:', err);
         throw err;
