@@ -305,6 +305,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             client, clientName, clientCompany, clientEmail, clientPhone, clientAddress,
             clientCity, clientState, clientZip, balanceDue, displayStatus,
             discountAmount, taxAmount, subtotal,
+            discountType, discountValue, taxRate,
             ...dbPayload
         } = invoice as any;
 
