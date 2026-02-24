@@ -55,7 +55,7 @@ interface AppContextType {
     updateCatalogItem: (item: CatalogService) => void;
     removeCatalogItem: (id: string) => void;
     invoices: Invoice[];
-    saveInvoice: (invoice: Invoice) => void;
+    saveInvoice: (invoice: Invoice) => Promise<boolean>;
     deleteInvoice: (id: string) => void;
     hardDeleteInvoice: (id: string) => void;
     restoreInvoice: (id: string) => void;
@@ -202,17 +202,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, [user]);
 
     const fetchClients = useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            console.warn('[AC] fetchClients: no user, skipping');
+            return;
+        }
+        console.log('[AC] fetchClients: fetching for user_id=', user.id);
         try {
-            const { data, error } = await supabase
+            const { data, error, count } = await supabase
                 .from('clients')
-                .select('*')
+                .select('*', { count: 'exact' })
                 .eq('user_id', user.id)
                 .order('name');
-            if (error) throw error;
-            if (data) setClients(data);
+            if (error) {
+                console.error('[AC] fetchClients error:', JSON.stringify(error));
+                throw error;
+            }
+            console.log('[AC] fetchClients result: rows=', count, 'data=', data);
+            setClients(data ?? []);
         } catch (error) {
-            console.error('Error fetching clients:', error);
+            console.error('[AC] fetchClients catch:', error);
         }
     }, [user]);
 
@@ -359,50 +367,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabase.from('catalog').delete().eq('id', id).eq('user_id', user.id);
     }, [user]);
 
-    const saveInvoice = useCallback(async (invoice: Invoice) => {
-        if (!user) return;
+    const saveInvoice = useCallback(async (invoice: Invoice): Promise<boolean> => {
+        if (!user) return false;
         const isNew = !invoices.find(i => i.id === invoice.id);
 
         // Map camelCase to snake_case for DB
         const dbPayload = {
             id: invoice.id,
             user_id: user.id,
-            client_id: invoice.client_id,
+            client_id: invoice.client_id || null,
             invoice_number: invoice.invoiceNumber,
-            issue_date: invoice.issueDate,
-            due_date: invoice.dueDate,
+            issue_date: invoice.issueDate || null,
+            due_date: invoice.dueDate || null,
             discount_type: invoice.discountType,
-            discount_value: invoice.discountValue,
+            discount_value: invoice.discountValue || 0,
             discount_amount: invoice.discountAmount || 0,
-            tax_rate: invoice.taxRate,
+            tax_rate: invoice.taxRate || 0,
             tax_amount: invoice.taxAmount || 0,
             subtotal: invoice.subtotal || 0,
-            total: invoice.total,
-            notes: invoice.notes,
-            payment_terms: invoice.paymentTerms,
-            payment_info: invoice.paymentInfo,
+            total: invoice.total || 0,
+            notes: invoice.notes || null,
+            payment_terms: invoice.paymentTerms || null,
+            payment_info: invoice.paymentInfo || null,
             status: invoice.status,
             paid_amount: invoice.paidAmount || 0,
-            payment_date: invoice.paymentDate,
-            payment_link: invoice.paymentLink,
-            line_items: invoice.lineItems,
+            payment_link: invoice.paymentLink || null,
+            line_items: invoice.lineItems || [],
             updated_at: new Date().toISOString()
         };
 
-        console.log('[AC] Attempting to save mapped invoice:', dbPayload);
+        console.log('[AC] saveInvoice: upserting', dbPayload);
 
         try {
             const { error } = await supabase.from('invoices').upsert(dbPayload);
 
             if (error) {
-                console.error('[AC] Supabase Upsert Error:', error);
+                console.error('[AC] saveInvoice upsert error:', JSON.stringify(error));
                 throw error;
             }
+            console.log('[AC] saveInvoice: success, isNew=', isNew);
             toast.success(`Invoice ${isNew ? 'created' : 'saved'}!`);
             await Promise.all([fetchDashboardData(), fetchPage(isNew ? 1 : currentPage)]);
+            return true;
         } catch (error: any) {
-            console.error('[AC] Final saveInvoice catch:', error);
+            console.error('[AC] saveInvoice catch:', error);
             toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+            return false;
         }
     }, [user, invoices, currentPage, fetchPage, fetchDashboardData]);
 
