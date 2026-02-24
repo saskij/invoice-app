@@ -1,43 +1,65 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "http/server.ts"
+import { createClient } from "supabase"
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
-    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+    // 1. Handle CORS
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
 
     try {
+        console.log('[SF-v2] New request received');
+
+        // 2. Initialize Supabase Client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
         const authHeader = req.headers.get('Authorization')!;
-        const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            { global: { headers: { Authorization: authHeader } } }
-        );
 
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) throw new Error('Unauthorized');
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+            global: { headers: { Authorization: authHeader } }
+        });
 
+        // 3. Get User
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            console.error('[SF-v2] Auth error:', userError);
+            return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+                status: 200, // Return 200 so frontend can show the message
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+        // 4. Parse Request
         const { to, subject, html, pdfBase64, filename } = await req.json();
+        console.log(`[SF-v2] Sending invoice #${filename} to ${to}`);
 
-        // 1. Get API Key from DB or ENV
-        const { data: settings } = await supabaseClient.from('settings').select('resend').eq('user_id', user.id).single();
+        // 5. Determine API Key (DB first, then ENV)
+        const { data: settings } = await supabase.from('settings').select('resend').eq('user_id', user.id).single();
         const apiKey = settings?.resend?.apiKey || Deno.env.get('RESEND_API_KEY');
 
         if (!apiKey) {
-            return new Response(JSON.stringify({ 
-                success: false, 
-                error: 'Resend API key is missing. Please go to Settings and enter your API key.' 
-            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            console.error('[SF-v2] No API key found');
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Resend API key missing. Please add it to your Email Settings.'
+            }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
         }
 
-        // 2. Call Resend
-        const response = await fetch('https://api.resend.com/emails', {
+        // 6. Send via Resend
+        const resendRes = await fetch('https://api.resend.com/emails', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
             body: JSON.stringify({
                 from: 'Invoices <onboarding@resend.dev>',
                 to: Array.isArray(to) ? to : [to],
@@ -47,25 +69,38 @@ serve(async (req) => {
             })
         });
 
-        const resData = await response.json();
+        const resendJson = await resendRes.json();
 
-        if (!response.ok) {
-            let error = resData.message || 'Resend API error';
-            if (response.status === 401) error = 'Invalid Resend API Key. Please update it in your Settings.';
-            if (response.status === 403) error = 'Resend Sandbox restriction: You can only send to your own email until you verify a domain.';
-            
-            return new Response(JSON.stringify({ success: false, error, details: resData }), 
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        if (!resendRes.ok) {
+            console.error('[SF-v2] Resend failure:', resendJson);
+            let msg = resendJson.message || 'Resend API error';
+            if (resendRes.status === 401) msg = 'Invalid Resend API Key. Please check settings.';
+            if (resendRes.status === 403) msg = 'Resend Sandbox: You can only send to your own email until you verify a domain.';
+
+            return new Response(JSON.stringify({ success: false, error: msg, details: resendJson }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
         }
 
-        // 3. Log and return
-        await supabaseClient.from('email_logs').insert({ user_id: user.id, sent_to: String(to), subject });
+        // 7. Log success
+        await supabase.from('email_logs').insert({
+            user_id: user.id,
+            sent_to: String(to),
+            subject
+        });
 
-        return new Response(JSON.stringify({ success: true, data: resData }), 
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        console.log('[SF-v2] Success');
+        return new Response(JSON.stringify({ success: true, data: resendJson }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
 
     } catch (err: any) {
-        return new Response(JSON.stringify({ success: false, error: err.message }), 
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        console.error('[SF-v2] Global error:', err);
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
-});
+})
