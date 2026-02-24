@@ -10,7 +10,7 @@ import InvoicePreviewModal from '../../components/Invoice/InvoicePreviewModal';
 import { AuthModal } from '../../components/Shared/AuthModal';
 import { UpgradeModal } from '../../components/Shared/UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
-import { Layout, Palette, ShoppingCart, Globe, ShieldCheck } from 'lucide-react';
+import { Layout, Palette, ShoppingCart, Globe, ShieldCheck, Calendar as CalendarIcon } from 'lucide-react';
 
 const SERVICE_TEMPLATES = [
     {
@@ -109,9 +109,9 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
 
     const [showExtraFields, setShowExtraFields] = useState(false);
-
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [datePickerType, setDatePickerType] = useState<'issue' | 'due' | null>(null);
 
     const isLimitReached = !editInvoice && profile?.plan === 'free' && (profile?.invoices_sent_count >= profile?.invoice_limit);
 
@@ -406,11 +406,23 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
                     </div>
                     <div>
                         <label className="label">Issue Date</label>
-                        <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
+                        <div
+                            onClick={() => setDatePickerType('issue')}
+                            className="input-field cursor-pointer flex items-center justify-between"
+                        >
+                            <span>{new Date(issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                            <CalendarIcon size={14} className="text-slate-400" />
+                        </div>
                     </div>
                     <div>
                         <label className="label">Due Date</label>
-                        <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                        <div
+                            onClick={() => setDatePickerType('due')}
+                            className="input-field cursor-pointer flex items-center justify-between"
+                        >
+                            <span>{new Date(dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                            <CalendarIcon size={14} className="text-slate-400" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -570,6 +582,50 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
                 currentCount={profile?.invoices_sent_count}
                 limit={profile?.invoice_limit}
             />
+
+            {/* Custom English Date Picker Modal */}
+            {datePickerType && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setDatePickerType(null)} />
+                    <div className="relative w-full max-w-sm glass-card p-6 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-white">Select {datePickerType === 'issue' ? 'Issue' : 'Due'} Date</h3>
+                            <button onClick={() => setDatePickerType(null)} className="p-2 text-slate-400 hover:text-white"><X size={20} /></button>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-4 uppercase font-bold tracking-widest">Universal English Calendar</p>
+                        <input
+                            type="date"
+                            className="input-field w-full mb-6 text-lg py-3"
+                            value={datePickerType === 'issue' ? issueDate : dueDate}
+                            onChange={(e) => {
+                                if (datePickerType === 'issue') setIssueDate(e.target.value);
+                                else setDueDate(e.target.value);
+                                setDatePickerType(null);
+                            }}
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => {
+                                    const d = new Date();
+                                    const val = d.toISOString().split('T')[0];
+                                    if (datePickerType === 'issue') setIssueDate(val);
+                                    else setDueDate(val);
+                                    setDatePickerType(null);
+                                }}
+                                className="btn-secondary py-3 text-sm justify-center"
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => setDatePickerType(null)}
+                                className="btn-primary py-3 text-sm justify-center"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

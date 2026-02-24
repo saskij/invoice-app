@@ -13,7 +13,7 @@ interface MobileTopBarProps {
 }
 
 const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onOpenMenu, title }) => {
-    const { profile, settings } = useApp();
+    const { profile } = useApp();
     const { user, signOut } = useAuth();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -76,8 +76,8 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onO
                             <button
                                 onClick={handleProfileClick}
                                 className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${user
-                                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
-                                        : 'bg-slate-800 border border-slate-700 text-slate-400'
+                                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 border border-indigo-400/30'
+                                    : 'bg-slate-800 border border-slate-700 text-slate-400'
                                     }`}
                             >
                                 {user?.user_metadata?.avatar_url ? (
@@ -89,7 +89,9 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onO
                                 ) : (
                                     user ? (
                                         <span className="text-xs font-bold text-white uppercase">
-                                            {settings?.company?.name?.slice(0, 2) || user.email?.slice(0, 2) || 'U'}
+                                            {profile?.company_name?.slice(0, 2) ||
+                                                profile?.full_name?.split(' ').map((n: string) => n[0]).join('') ||
+                                                user.email?.slice(0, 2) || 'U'}
                                         </span>
                                     ) : (
                                         <User size={18} />

@@ -15,7 +15,7 @@ interface TopBarProps {
     companyName?: string;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
+const TopBar: React.FC<TopBarProps> = ({ activePage }) => {
     const info = PAGE_TITLES[activePage] || { title: activePage, subtitle: '' };
     const { profile } = useApp();
     const { user, signOut, openAuthModal } = useAuth();
@@ -105,7 +105,7 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                             className="hover:bg-slate-800"
                         >
                             <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
-                                {user.email?.split('@')[0]}
+                                {profile?.company_name || profile?.full_name || user.email?.split('@')[0]}
                             </span>
                             <div
                                 style={{
@@ -122,7 +122,11 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                                     border: '1px solid rgba(255,255,255,0.1)'
                                 }}
                             >
-                                {!user?.user_metadata?.avatar_url && (companyName ? companyName.slice(0, 2).toUpperCase() : user.email?.slice(0, 2).toUpperCase())}
+                                {!user?.user_metadata?.avatar_url && (
+                                    profile?.company_name
+                                        ? profile.company_name.slice(0, 2).toUpperCase()
+                                        : (profile?.full_name ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : user.email?.slice(0, 2).toUpperCase())
+                                )}
                             </div>
                             <ChevronDown size={14} className={`text-slate-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                         </div>
