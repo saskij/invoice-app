@@ -299,11 +299,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!user) return;
         const isNew = !invoices.find(i => i.id === invoice.id);
 
-        // Sanitize payload: Remove virtual fields and obsolete 'client' column
+        // Sanitize payload: Remove virtual fields and obsolete columns
         // only keep what belongs in the physical 'invoices' table
         const {
             client, clientName, clientCompany, clientEmail, clientPhone, clientAddress,
             clientCity, clientState, clientZip, balanceDue, displayStatus,
+            discountAmount, taxAmount, subtotal,
             ...dbPayload
         } = invoice as any;
 
