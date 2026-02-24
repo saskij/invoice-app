@@ -1,12 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useApp } from '../../context/AppContext';
-import type { Invoice, LineItem, Client } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Eye, Send, Save, UserPlus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
-import { sendInvoiceEmail } from '../../utils/emailSender';
 import InvoicePreviewModal from '../../components/Invoice/InvoicePreviewModal';
+import { AuthModal } from '../../components/Shared/AuthModal';
+import { UpgradeModal } from '../../components/Shared/UpgradeModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface NewInvoicePageMobileProps {
     editInvoice?: Invoice | null;
@@ -16,7 +11,8 @@ interface NewInvoicePageMobileProps {
 const emptyClient: Client = { id: '', name: '', email: '', company: '', address: '', city: '', state: '', zip: '', phone: '' };
 
 const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, invoices, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient } = useApp();
+    const { settings, catalog, invoices, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient, profile } = useApp();
+    const { user } = useAuth();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -48,7 +44,10 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const [showExtraFields, setShowExtraFields] = useState(false);
 
     const nonDeletedInvoices = invoices.filter(i => i.status !== 'deleted');
-    const isLimitReached = !editInvoice && settings.subscriptionStatus === 'free' && nonDeletedInvoices.length >= settings.invoiceLimit;
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    const isLimitReached = !editInvoice && profile?.plan === 'free' && (profile?.invoices_sent_count >= profile?.invoice_limit);
 
     const activeClient = clients.find(c => c.id === selectedClientId) || (initialData?.client as any as Client) || emptyClient;
 
@@ -169,10 +168,8 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     ]);
 
     const handleSave = async (newStatus: Invoice['status'] = status) => {
-        if (!editInvoice && isLimitReached) {
-            toast.error(`Limit reached! Upgrade for more.`);
-            return;
-        }
+        if (!user) { setShowAuthModal(true); return; }
+        if (isLimitReached) { setShowUpgradeModal(true); return; }
         if (!selectedClientId) { toast.error('Please select a client.'); return; }
         if (lineItems.length === 0) { toast.error('Add items.'); return; }
 
@@ -199,6 +196,9 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     };
 
     const handleSendEmail = async () => {
+        if (!user) { setShowAuthModal(true); return; }
+        if (isLimitReached) { setShowUpgradeModal(true); return; }
+
         let recipientEmail = activeClient.email || '';
 
         if (!recipientEmail.trim()) {
@@ -403,6 +403,20 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
             {showPreview && (
                 <InvoicePreviewModal invoice={buildInvoice()} company={settings.company} onClose={() => setShowPreview(false)} onDownload={handleDownloadPDF} />
             )}
+
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                title="Save & Send like a Pro"
+                subtitle="Join 1,000+ businesses and manage your invoices with ease."
+            />
+
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                currentCount={profile?.invoices_sent_count}
+                limit={profile?.invoice_limit}
+            />
         </div>
     );
 };
