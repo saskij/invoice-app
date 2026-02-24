@@ -488,6 +488,40 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                         </div>
                     </div>
 
+                    {/* Invoice Details: Number, Issue Date, Due Date */}
+                    <div className="glass-card" style={{ padding: 24 }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Details</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+                            <div>
+                                <label className="label">Invoice Number</label>
+                                <input
+                                    className="input-field"
+                                    value={invoiceNumber}
+                                    onChange={e => setInvoiceNumber(e.target.value)}
+                                    placeholder="Auto-generated"
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Issue Date</label>
+                                <input
+                                    className="input-field"
+                                    type="date"
+                                    value={issueDate}
+                                    onChange={e => setIssueDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Due Date</label>
+                                <input
+                                    className="input-field"
+                                    type="date"
+                                    value={dueDate}
+                                    onChange={e => setDueDate(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Services & Items</h3>
