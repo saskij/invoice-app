@@ -298,12 +298,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saveInvoice = useCallback(async (invoice: Invoice) => {
         if (!user) return;
         const isNew = !invoices.find(i => i.id === invoice.id);
+        console.log('[AC] Attempting to save invoice:', invoice);
         try {
             const { error } = await supabase.from('invoices').upsert({ ...invoice, user_id: user.id, updatedAt: new Date().toISOString() });
-            if (error) throw error;
+            if (error) {
+                console.error('[AC] Supabase Upsert Error:', error);
+                throw error;
+            }
             toast.success(`Invoice ${isNew ? 'created' : 'saved'}!`);
             await Promise.all([fetchDashboardData(), fetchPage(isNew ? 1 : currentPage)]);
-        } catch (error) { toast.error('Failed to save invoice.'); }
+        } catch (error: any) {
+            console.error('[AC] Final saveInvoice catch:', error);
+            toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+        }
     }, [user, invoices, currentPage, fetchPage, fetchDashboardData]);
 
     const deleteInvoice = useCallback(async (id: string) => {

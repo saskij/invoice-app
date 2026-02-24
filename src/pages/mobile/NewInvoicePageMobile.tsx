@@ -237,6 +237,21 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
         }
     };
 
+    const handleClear = () => {
+        if (isDirty && !window.confirm('Clear form? Changes will be lost.')) return;
+
+        setInvoiceNumber('');
+        setSelectedClientId('');
+        setLineItems([]);
+        setIssueDate(today);
+        setDueDate(thirtyDays);
+        setDiscountType('percentage');
+        setDiscountValue(0);
+        setTaxRate(settings.defaultTaxRate ?? 0);
+        setNotes('');
+        toast.success('Cleared');
+    };
+
     return (
         <div className="animate-fade-in" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Invoice Number & Dates */}
@@ -261,9 +276,17 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
             <div className="glass-card" style={{ padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Bill To</h3>
-                    <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setIsAddingNewClient(!isAddingNewClient)}>
-                        {isAddingNewClient ? <X size={14} /> : <><UserPlus size={14} /> New</>}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            onClick={handleClear}
+                            style={{ background: 'rgba(239,68,68,0.1)', border: 'none', borderRadius: 6, padding: '4px 8px', color: '#f87171', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                            <Trash2 size={12} /> Clear
+                        </button>
+                        <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => setIsAddingNewClient(!isAddingNewClient)}>
+                            {isAddingNewClient ? <X size={14} /> : <><UserPlus size={14} /> New</>}
+                        </button>
+                    </div>
                 </div>
 
                 {!isAddingNewClient ? (
