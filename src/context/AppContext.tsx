@@ -81,6 +81,8 @@ interface AppContextType {
     recordPayment: (invoice_id: string, amount: number, notes?: string) => Promise<void>;
     dashboardData: DashboardData | null;
     fetchDashboardData: () => Promise<void>;
+    profile: any | null;
+    fetchProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -97,6 +99,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [profile, setProfile] = useState<any | null>(null);
     const [draftInvoice, setDraftInvoice] = useState<Partial<Invoice> | null>(() => {
         const saved = localStorage.getItem('invoice_app_draft');
         return saved ? JSON.parse(saved) : null;
