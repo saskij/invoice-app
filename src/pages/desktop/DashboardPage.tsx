@@ -11,6 +11,12 @@ import {
     FilePlus,
     AlertCircle,
     Loader2,
+    Users,
+    BarChart3,
+    ShieldCheck,
+    Zap,
+    Gift,
+    Layout,
 } from 'lucide-react';
 
 interface DashboardPageProps {
@@ -32,20 +38,136 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
     if (!user) {
         return (
-            <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
-                <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <TrendingUp size={32} className="text-slate-600" />
+            <div className="animate-fade-in" style={{ padding: '60px 40px', maxWidth: 1200, margin: '0 auto' }}>
+                {/* Hero Section */}
+                <div style={{ textAlign: 'center', marginBottom: 60 }}>
+                    <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: 'rgba(99, 102, 241, 0.1)',
+                        padding: '8px 16px',
+                        borderRadius: 20,
+                        color: '#818cf8',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: 24
+                    }}>
+                        <Zap size={14} /> Power Your Business
+                    </div>
+                    <h2 style={{ color: '#f8fafc', fontSize: 42, fontWeight: 900, marginBottom: 16, letterSpacing: '-0.02em' }}>
+                        Transform Your <span style={{ color: '#6366f1' }}>Invoicing</span> into Growth
+                    </h2>
+                    <p style={{ color: '#94a3b8', fontSize: 18, maxWidth: 650, margin: '0 auto', lineHeight: 1.6 }}>
+                        Join thousands of professionals who track revenue, manage clients, and get paid faster with our automated insights and professional templates.
+                    </p>
                 </div>
-                <h3 style={{ color: '#e2e8f0', fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Unlock Your Dashboard</h3>
-                <p style={{ maxWidth: 400, margin: '0 auto 24px', lineHeight: 1.6 }}> Sign in to track your revenue, manage clients, and see detailed analytics of your invoicing business.</p>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                    <button
-                        onClick={() => setIsAuthModalOpen(true)}
-                        className="btn-primary"
-                    >
-                        Sign In Now
-                    </button>
+
+                {/* Features Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 80 }}>
+                    {[
+                        { icon: BarChart3, title: 'Real-time Analytics', desc: 'Monitor your revenue growth, pending payments, and business health at a glance.' },
+                        { icon: Users, title: 'Client Management', desc: 'Securely store client data, history, and preferred payment terms in one place.' },
+                        { icon: Layout, title: 'Premium Templates', desc: 'Access high-conversion invoice templates designed specifically for web developers.' },
+                        { icon: ShieldCheck, title: 'Cloud Persistence', desc: 'Never lose an invoice. Your data is securely backed up and synced across all devices.' },
+                        { icon: TrendingUp, title: 'Revenue Tracking', desc: 'Get detailed reports on your monthly and annual earnings performance.' },
+                        { icon: Clock, title: 'Payment Reminders', desc: 'Stay on top of overdue invoices and automate your payment follow-ups.' },
+                    ].map((feature, i) => (
+                        <div key={i} className="glass-card" style={{ padding: 24, border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                                <feature.icon size={22} />
+                            </div>
+                            <h4 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{feature.title}</h4>
+                            <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.5, margin: 0 }}>{feature.desc}</p>
+                        </div>
+                    ))}
                 </div>
+
+                {/* Pricing Section */}
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                    <h3 style={{ color: '#f8fafc', fontSize: 28, fontWeight: 800, marginBottom: 40 }}>Choose the Plan That Scales With You</h3>
+                    <div style={{ display: 'flex', gap: 32, justifyContent: 'center', alignItems: 'stretch' }}>
+                        {/* Free Plan */}
+                        <div className="glass-card" style={{ width: 340, padding: 32, display: 'flex', flexDirection: 'column', textAlign: 'left', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Individual</div>
+                            <div style={{ color: '#f8fafc', fontSize: 32, fontWeight: 800, marginBottom: 24 }}>$0 <span style={{ fontSize: 14, color: '#475569', fontWeight: 500 }}>/ mo</span></div>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {['Create 5 invoices / mo', 'Standard Templates', 'Local Storage Only', 'PDF Downloads'].map((item, i) => (
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 14 }}>
+                                        <CheckCircle size={14} className="text-slate-600" /> {item}
+                                    </li>
+                                ))}
+                            </ul>
+                            <button
+                                onClick={() => setIsAuthModalOpen(true)}
+                                className="btn-secondary"
+                                style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+                            >
+                                Get Started Free
+                            </button>
+                        </div>
+
+                        {/* Pro Plan */}
+                        <div className="glass-card" style={{
+                            width: 360,
+                            padding: 32,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            textAlign: 'left',
+                            position: 'relative',
+                            border: '2px solid #6366f1',
+                            background: 'rgba(99, 102, 241, 0.03)'
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: -14,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: '#6366f1',
+                                color: 'white',
+                                padding: '4px 16px',
+                                borderRadius: 20,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                            }}>
+                                Recommended
+                            </div>
+                            <div style={{ color: '#818cf8', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Professional</div>
+                            <div style={{ color: '#f8fafc', fontSize: 32, fontWeight: 800, marginBottom: 8 }}>$20 <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>/ mo</span></div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: 4, color: '#10b981', fontSize: 11, fontWeight: 700, marginBottom: 20 }}>
+                                <Clock size={10} /> 3-DAY FREE TRIAL
+                            </div>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {['Unlimited Invoices', 'Advanced Analytics Dashboard', 'Cloud Sync & Persistence', 'Client CRM System', 'Web Dev Template Packs', 'Priority Email Support'].map((item, i) => (
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#e2e8f0', fontSize: 14 }}>
+                                        <CheckCircle size={14} className="text-indigo-500" /> {item}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fbbf24', fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
+                                    <Gift size={14} /> Annual Deal: $220/year (1 Month Free)
+                                </div>
+                                <button
+                                    onClick={() => setIsAuthModalOpen(true)}
+                                    className="btn-primary"
+                                    style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+                                >
+                                    Start Your Trial Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p style={{ textAlign: 'center', color: '#475569', fontSize: 13 }}>
+                    No credit card required for the free version. Cancel Pro anytime.
+                </p>
+
                 <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
             </div>
         );

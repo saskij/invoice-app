@@ -10,7 +10,13 @@ import {
     TrendingUp,
     FilePlus,
     AlertCircle,
-    Loader2
+    Loader2,
+    Users,
+    BarChart3,
+    ShieldCheck,
+    Zap,
+    Gift,
+    Layout
 } from 'lucide-react';
 
 interface DashboardPageMobileProps {
@@ -32,18 +38,114 @@ const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate })
 
     if (!user) {
         return (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-                    <TrendingUp size={28} className="text-indigo-400" />
+            <div className="animate-fade-in" style={{ padding: '40px 16px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+                {/* Hero */}
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: 'rgba(99, 102, 241, 0.1)',
+                        padding: '6px 12px',
+                        borderRadius: 16,
+                        color: '#818cf8',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: 16
+                    }}>
+                        <Zap size={12} /> Pro Dashboard
+                    </div>
+                    <h2 style={{ color: '#f8fafc', fontSize: 28, fontWeight: 900, marginBottom: 12, lineHeight: 1.1 }}>
+                        Grow Your <span style={{ color: '#6366f1' }}>Business</span>
+                    </h2>
+                    <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+                        Unlock advanced tracking, client CRM, and premium templates today.
+                    </p>
                 </div>
-                <h3 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, marginBottom: 12 }}>Control Your Business</h3>
-                <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 32 }}>Sign in to track revenue, manage clients, and grow your business with automated insights.</p>
-                <button
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="w-full btn-primary justify-center py-3"
-                >
-                    Sign In to Dashboard
-                </button>
+
+                {/* Pricing Cards Stack */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {/* Pro Plan (Higher Priority on Mobile) */}
+                    <div className="glass-card" style={{
+                        padding: 24,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        textAlign: 'left',
+                        position: 'relative',
+                        border: '2px solid #6366f1',
+                        background: 'rgba(99, 102, 241, 0.03)'
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            top: -12,
+                            right: 16,
+                            background: '#6366f1',
+                            color: 'white',
+                            padding: '2px 10px',
+                            borderRadius: 10,
+                            fontSize: 10,
+                            fontWeight: 800,
+                            textTransform: 'uppercase'
+                        }}>
+                            Popular
+                        </div>
+                        <div style={{ color: '#818cf8', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Professional</div>
+                        <div style={{ color: '#f8fafc', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>$20 <span style={{ fontSize: 14, color: '#64748b', fontWeight: 500 }}>/ mo</span></div>
+
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(16, 185, 129, 0.1)', padding: '4px 8px', borderRadius: 4, color: '#10b981', fontSize: 11, fontWeight: 700, marginBottom: 16 }}>
+                            <Clock size={12} /> 3-DAY FREE TRIAL
+                        </div>
+
+                        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {['Unlimited Invoices', 'Cloud Sync & Sync', 'Client CRM System', 'Premium Templates'].map((item, i) => (
+                                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 13 }}>
+                                    <CheckCircle size={14} className="text-indigo-500" /> {item}
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div style={{ color: '#fbbf24', fontSize: 11, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Gift size={12} /> Annual Deal: Get 1 Month Free!
+                        </div>
+
+                        <button
+                            onClick={() => setIsAuthModalOpen(true)}
+                            className="btn-primary w-full justify-center py-3"
+                        >
+                            Start My Free Trial
+                        </button>
+                    </div>
+
+                    {/* Free Plan */}
+                    <div className="glass-card" style={{ padding: 20, textAlign: 'left', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ color: '#64748b', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Free</div>
+                        <div style={{ color: '#f8fafc', fontSize: 20, fontWeight: 800, marginBottom: 12 }}>$0 <span style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>/ mo</span></div>
+                        <button
+                            onClick={() => setIsAuthModalOpen(true)}
+                            className="btn-secondary w-full justify-center py-2 text-xs"
+                        >
+                            Continue with Free Plan
+                        </button>
+                    </div>
+                </div>
+
+                {/* Features List */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                    {[
+                        { icon: BarChart3, title: 'Analytics' },
+                        { icon: Users, title: 'Clients' },
+                        { icon: Layout, title: 'Templates' },
+                        { icon: ShieldCheck, title: 'Security' },
+                    ].map((feature, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(30, 41, 59, 0.5)', padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <feature.icon size={16} className="text-indigo-400" />
+                            <span style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600 }}>{feature.title}</span>
+                        </div>
+                    ))}
+                </div>
+
                 <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
             </div>
         );
