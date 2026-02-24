@@ -1,5 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { AuthModal } from '../../components/Shared/AuthModal';
 import {
     FileText,
     DollarSign,
@@ -17,11 +19,32 @@ interface DashboardPageMobileProps {
 
 const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate }) => {
     const { dashboardData, settings, invoices, loading } = useApp();
+    const { user } = useAuth();
+    const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
 
     if (loading) {
         return (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh' }}>
                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <TrendingUp size={28} className="text-indigo-400" />
+                </div>
+                <h3 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, marginBottom: 12 }}>Control Your Business</h3>
+                <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 32 }}>Sign in to track revenue, manage clients, and grow your business with automated insights.</p>
+                <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full btn-primary justify-center py-3"
+                >
+                    Sign In to Dashboard
+                </button>
+                <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
             </div>
         );
     }

@@ -169,7 +169,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 recentInvoices: recent || []
             });
         } catch (error) {
-            console.error('Error fetching dashboard data:', error);
+            console.error('[AC] fetchDashboardData error:', error);
+            // Fallback to local invoices if view fails or errors
+            const revenue = invoices.filter(i => i.displayStatus === 'paid').reduce((sum, i) => sum + (i.total || 0), 0);
+            const pending = invoices.filter(i => i.displayStatus === 'sent').reduce((sum, i) => sum + (i.total || 0), 0);
+            const overdue = invoices.filter(i => i.displayStatus === 'overdue').reduce((sum, i) => sum + (i.total || 0), 0);
+            const paidCount = invoices.filter(i => i.displayStatus === 'paid').length;
+
+            setDashboardData({
+                totalRevenue: revenue,
+                pendingAmount: pending,
+                overdueAmount: overdue,
+                paidCount,
+                recentInvoices: invoices.slice(0, 5)
+            });
         }
     }, [user]);
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { AuthModal } from '../../components/Shared/AuthModal';
 import {
     FileText,
     DollarSign,
@@ -17,6 +19,8 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     const { dashboardData, settings, invoices, loading } = useApp();
+    const { user } = useAuth();
+    const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
 
     if (loading) {
         return (
@@ -26,7 +30,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         );
     }
 
+    if (!user) {
+        return (
+            <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+                <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <TrendingUp size={32} className="text-slate-600" />
+                </div>
+                <h3 style={{ color: '#e2e8f0', fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Unlock Your Dashboard</h3>
+                <p style={{ maxWidth: 400, margin: '0 auto 24px', lineHeight: 1.6 }}> Sign in to track your revenue, manage clients, and see detailed analytics of your invoicing business.</p>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                    <button
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="btn-primary"
+                    >
+                        Sign In Now
+                    </button>
+                </div>
+                <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+            </div>
+        );
+    }
+
     if (!dashboardData) {
+        // ... (existing error state)
         return (
             <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                 <AlertCircle size={40} style={{ margin: '0 auto 16px', display: 'block', opacity: 0.5 }} />
