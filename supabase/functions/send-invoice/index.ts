@@ -100,13 +100,36 @@ serve(async (req) => {
             }
         }
 
-        // 9. Send email via Resend API
-        console.log(`[SF] Attempting to send email to: ${to}`);
+        // 9. Fetch user's Resend API key from settings
+        console.log(`[SF] Fetching settings for user: ${user.id}`);
+        const { data: settings, error: settingsError } = await supabaseClient
+            .from('settings')
+            .select('resend')
+            .eq('user_id', user.id)
+            .single();
+
+        if (settingsError) {
+            console.warn('[SF] Settings lookup warning:', settingsError.message);
+        }
+
+        const userResendKey = settings?.resend?.apiKey;
+        const finalResendKey = userResendKey || RESEND_API_KEY;
+
+        if (!finalResendKey) {
+            console.error('[SF] Configuration Error: No Resend API key found for user or system');
+            return new Response(
+                JSON.stringify({ error: 'Resend API key is not configured. Please add it in your Settings.' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+        }
+
+        // 10. Send email via Resend API
+        console.log(`[SF] Attempting to send email to: ${to} (Key source: ${userResendKey ? 'User Settings' : 'System Default'})`);
         const resendResponse = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Authorization': `Bearer ${finalResendKey}`,
             },
             body: JSON.stringify({
                 from: 'Invoices <onboarding@resend.dev>',
@@ -122,22 +145,42 @@ serve(async (req) => {
             }),
         });
 
-        const resData = await resendResponse.json();
+        // 11. Process Resend API response
+        let resData;
+        const responseText = await resendResponse.text();
+        try {
+            resData = JSON.parse(responseText);
+        } catch (e) {
+            resData = { message: responseText };
+        }
+
         console.log('[SF] Resend API Response Status:', resendResponse.status);
         console.log('[SF] Resend API Response Data:', JSON.stringify(resData, null, 2));
 
         if (!resendResponse.ok) {
-            let errorMessage = resData.message || 'Failed to send email via Resend';
-            if (resendResponse.status === 403 && errorMessage.includes('onboarding@resend.dev')) {
-                errorMessage = 'Resend Sandbox: Verify your domain or recipient email address.';
+            let errorMessage = resData.message || resData.error || 'Failed to send email via Resend';
+
+            // Special handling for common Resend Sandbox/Key errors
+            if (resendResponse.status === 403 && (errorMessage.includes('onboarding@resend.dev') || errorMessage.includes('restricted'))) {
+                errorMessage = 'Resend Sandbox restriction: You can only send to your own verified email until you add a custom domain in Resend.';
+            } else if (resendResponse.status === 401) {
+                errorMessage = 'Invalid Resend API Key. Please check your Settings.';
             }
+
+            console.error('[SF] Resend Error:', errorMessage);
+
             return new Response(
-                JSON.stringify({ error: errorMessage, details: resData }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: resendResponse.status }
+                JSON.stringify({
+                    success: false,
+                    error: errorMessage,
+                    details: resData,
+                    status: resendResponse.status
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
             );
         }
 
-        // 10. Log successful send to DB
+        // 12. Log successful send to DB
         try {
             const { error: logError } = await supabaseClient.from('email_logs').insert({
                 user_id: user.id,

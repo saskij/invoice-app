@@ -76,9 +76,10 @@ export async function sendInvoiceEmail({
             throw new Error(`${error.message}${detail}`);
         }
 
-        if (data?.error) {
-            console.error('[ES] Edge Function Logic Error:', data.error);
-            throw new Error(data.error);
+        if (data?.success === false || data?.error) {
+            const errorMsg = data.error || 'Unknown error from Edge Function';
+            console.error('[ES] Edge Function Logic Error:', errorMsg, data);
+            throw new Error(errorMsg);
         }
 
         console.log('[ES] Email successfully delivered to Edge Function!', data);
