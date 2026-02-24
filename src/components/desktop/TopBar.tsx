@@ -21,6 +21,7 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
     const { profile } = useApp();
     const { user, signOut } = useAuth();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('signup');
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     const usagePercent = profile ? Math.min((profile.invoices_sent_count / profile.invoice_limit) * 100, 100) : 0;
@@ -129,13 +130,30 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                             <ChevronDown size={14} className={`text-slate-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                         </div>
                     ) : (
-                        <button
-                            onClick={() => setIsAuthModalOpen(true)}
-                            className="btn-primary"
-                            style={{ padding: '8px 16px', fontSize: 13, borderRadius: 10 }}
-                        >
-                            Sign In
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button
+                                onClick={() => { setAuthModalTab('login'); setIsAuthModalOpen(true); }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    padding: '8px 4px'
+                                }}
+                                className="hover:text-white transition-colors"
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={() => { setAuthModalTab('signup'); setIsAuthModalOpen(true); }}
+                                className="btn-primary"
+                                style={{ padding: '8px 20px', fontSize: 13, borderRadius: 10, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+                            >
+                                Get Started
+                            </button>
+                        </div>
                     )}
 
                     {showProfileMenu && user && (
@@ -189,6 +207,7 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
 
                 <AuthModal
                     isOpen={isAuthModalOpen}
+                    initialIsLogin={authModalTab === 'login'}
                     onClose={() => setIsAuthModalOpen(false)}
                 />
             </div>

@@ -8,15 +8,17 @@ interface AuthModalProps {
     onClose: () => void;
     title?: string;
     subtitle?: string;
+    initialIsLogin?: boolean;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
     isOpen,
     onClose,
     title = 'Create your free account to continue',
-    subtitle = 'Save your invoices and unlock professional features.'
+    subtitle = 'Save your invoices and unlock professional features.',
+    initialIsLogin = false
 }) => {
-    const [isLogin, setIsLogin] = useState(false); // Default to Sign Up for new users
+    const [isLogin, setIsLogin] = useState(initialIsLogin);
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
