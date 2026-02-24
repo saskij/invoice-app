@@ -150,11 +150,17 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
         doc.setFillColor(...LIGHT_COLOR);
         doc.roundedRect(rightX, y, halfW, 110, 6, 6, 'F');
 
+        const getClientStatus = (s: string) => {
+            const status = s.toLowerCase();
+            if (status === 'draft' || status === 'sent') return 'PENDING';
+            return status.toUpperCase();
+        };
+
         const details: [string, string][] = [
             ['Invoice Number', `#${sanitizeInput(invoice.invoiceNumber)}`],
             ['Issue Date', formatDate(invoice.issueDate)],
             ['Due Date', formatDate(invoice.dueDate)],
-            ['Status', sanitizeInput(invoice.status).toUpperCase()],
+            ['Status', getClientStatus(sanitizeInput(invoice.status))],
         ];
         let dy = y + 18;
         for (const [label, value] of details) {

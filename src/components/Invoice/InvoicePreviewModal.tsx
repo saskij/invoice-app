@@ -137,16 +137,24 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                             </div>
                             <div style={{ background: '#f8fafc', borderRadius: 10, padding: '16px' }}>
                                 <div style={{ fontSize: 10, fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Invoice Details</div>
-                                {[
-                                    ['Issue Date', fmtDate(invoice.issueDate)],
-                                    ['Due Date', fmtDate(invoice.dueDate)],
-                                    ['Status', (invoice.displayStatus || invoice.status).toUpperCase()],
-                                ].map(([label, value]) => (
-                                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{label}</span>
-                                        <span style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{value}</span>
-                                    </div>
-                                ))}
+                                {(() => {
+                                    const getClientStatus = (s: string) => {
+                                        const status = s.toLowerCase();
+                                        if (status === 'draft' || status === 'sent') return 'PENDING';
+                                        return status.toUpperCase();
+                                    };
+
+                                    return [
+                                        ['Issue Date', fmtDate(invoice.issueDate)],
+                                        ['Due Date', fmtDate(invoice.dueDate)],
+                                        ['Status', getClientStatus(invoice.displayStatus || invoice.status)],
+                                    ].map(([label, value]) => (
+                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{label}</span>
+                                            <span style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{value}</span>
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         </div>
 
