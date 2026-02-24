@@ -79,7 +79,7 @@ interface AppContextType {
     statusFilter: string;
     setStatusFilter: (s: string) => void;
     fetchPage: (page: number, search?: string, status?: string) => Promise<void>;
-    recordPayment: (invoice_id: string, amount: number, notes?: string) => Promise<void>;
+    recordPayment: (invoice_id: string, amount: number, notes?: string, newIssueDate?: string, newDueDate?: string) => Promise<void>;
     dashboardData: DashboardData | null;
     fetchDashboardData: () => Promise<void>;
     profile: any | null;
@@ -431,9 +431,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast.success('Invoice duplicated!');
     }, []);
 
-    const recordPayment = useCallback(async (invoice_id: string, amount: number, notes: string = '') => {
+    const recordPayment = useCallback(async (invoice_id: string, amount: number, notes: string = '', newIssueDate?: string, newDueDate?: string) => {
         if (!user) return;
+
+        // 1. Record the payment history
         await supabase.from('payment_history').insert({ invoice_id, amount, notes, payment_method: 'Manual' });
+
+        // 2. Update the invoice itself (paid_amount and optionally dates)
+        const { data: inv } = await supabase.from('invoices').select('paid_amount, total').eq('id', invoice_id).single();
+        if (inv) {
+            const newPaidAmount = (inv.paid_amount || 0) + amount;
+            const updatePayload: any = {
+                paid_amount: newPaidAmount,
+                updated_at: new Date().toISOString()
+            };
+
+            if (newIssueDate) updatePayload.issue_date = newIssueDate;
+            if (newDueDate) updatePayload.due_date = newDueDate;
+
+            await supabase.from('invoices').update(updatePayload).eq('id', invoice_id);
+        }
+
         toast.success('Payment recorded!');
         await Promise.all([fetchDashboardData(), fetchPage(currentPage)]);
     }, [user, fetchPage, currentPage, fetchDashboardData]);

@@ -24,6 +24,8 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [paymentModalId, setPaymentModalId] = useState<string | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<string>('');
+    const [paymentIssueDate, setPaymentIssueDate] = useState<string>('');
+    const [paymentDueDate, setPaymentDueDate] = useState<string>('');
     const [localSearch, setLocalSearch] = useState(searchQuery);
 
     // Search Debouncing
@@ -154,7 +156,14 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                                         </div>
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             {(inv.balanceDue ?? inv.total) > 0 && (
-                                                <button title="Record Payment" onClick={() => { setPaymentModalId(inv.id); setPaymentAmount((inv.balanceDue ?? inv.total).toString()); }} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#34d399' }}>
+                                                <button title="Record Payment"
+                                                    onClick={() => {
+                                                        setPaymentModalId(inv.id);
+                                                        setPaymentAmount((inv.balanceDue ?? inv.total).toString());
+                                                        setPaymentIssueDate(inv.issueDate || '');
+                                                        setPaymentDueDate(inv.dueDate || '');
+                                                    }}
+                                                    style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#34d399' }}>
                                                     <DollarSign size={16} />
                                                 </button>
                                             )}
@@ -263,8 +272,28 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                         <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20, lineHeight: 1.5 }}>
                             Record payment for invoice #{invoices.find(i => i.id === paymentModalId)?.invoiceNumber}.
                         </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>Issue Date</label>
+                                <input
+                                    type="date"
+                                    className="input-field"
+                                    value={paymentIssueDate}
+                                    onChange={e => setPaymentIssueDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>Due Date</label>
+                                <input
+                                    type="date"
+                                    className="input-field"
+                                    value={paymentDueDate}
+                                    onChange={e => setPaymentDueDate(e.target.value)}
+                                />
+                            </div>
+                        </div>
                         <div style={{ marginBottom: 24 }}>
-                            <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>Amount</label>
+                            <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>Amount</label>
                             <input
                                 type="number"
                                 className="input-field"
@@ -276,7 +305,7 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button className="btn-secondary" style={{ flex: 1, padding: '12px' }} onClick={() => setPaymentModalId(null)}>Cancel</button>
                             <button className="btn-primary" style={{ flex: 1, padding: '12px' }} onClick={async () => {
-                                await recordPayment(paymentModalId, parseFloat(paymentAmount));
+                                await recordPayment(paymentModalId, parseFloat(paymentAmount), '', paymentIssueDate, paymentDueDate);
                                 setPaymentModalId(null);
                             }}>Save</button>
                         </div>
