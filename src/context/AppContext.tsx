@@ -136,7 +136,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .select('total, displayStatus')
                 .eq('user_id', user.id);
 
-            if (statsError) throw statsError;
+            if (statsError) {
+                console.error('[AC] Dashboard stats error:', statsError);
+                throw statsError;
+            }
+            console.log('[AC] Dashboard stats fetched:', statsData?.length);
 
             const revenue = statsData.filter(i => i.displayStatus === 'paid').reduce((sum, i) => sum + (i.total || 0), 0);
             const pending = statsData.filter(i => i.displayStatus === 'sent').reduce((sum, i) => sum + (i.total || 0), 0);
@@ -151,7 +155,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .order('createdAt', { ascending: false })
                 .limit(5);
 
-            if (recentError) throw recentError;
+            if (recentError) {
+                console.error('[AC] Dashboard recent error:', recentError);
+                throw recentError;
+            }
+            console.log('[AC] Dashboard recent fetched:', recent?.length);
 
             setDashboardData({
                 totalRevenue: revenue,

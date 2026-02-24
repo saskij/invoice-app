@@ -18,10 +18,26 @@ interface DashboardPageMobileProps {
 const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate }) => {
     const { dashboardData, settings, invoices, loading } = useApp();
 
-    if (loading || !dashboardData) {
+    if (loading) {
         return (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh' }}>
                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!dashboardData) {
+        return (
+            <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                <AlertCircle size={40} style={{ margin: '0 auto 16px', display: 'block', opacity: 0.5 }} />
+                <h3 style={{ color: '#e2e8f0', marginBottom: 8 }}>Dashboard Unavailable</h3>
+                <p>We couldn't load your dashboard data. This might be due to a connection issue or missing records.</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    style={{ marginTop: 16, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                >
+                    Retry Loading →
+                </button>
             </div>
         );
     }
