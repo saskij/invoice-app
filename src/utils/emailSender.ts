@@ -54,16 +54,22 @@ export async function sendInvoiceEmail({
         console.log('[ES] JWT Expiry:', new Date(session.expires_at! * 1000).toLocaleString());
     }
 
-    console.log('[ES] Attempting to invoke Edge Function "send-invoice"...');
+    console.log('[ES] Attempting to invoke Edge Function "send-invoice-v2"...');
 
     try {
-        const { data, error } = await supabase.functions.invoke('send-invoice', {
+        const { data, error } = await supabase.functions.invoke('send-invoice-v2', {
             body: payload
         });
 
         if (error) {
-            console.error('[ES] Supabase Invoke Error:', error);
-            throw new Error(`Connection Error: ${error.message}`);
+            console.error('[ES] Supabase Invoke Error Details:', {
+                message: error.message,
+                name: error.name,
+                // Some versions of supabase-js include context or status here
+                status: (error as any).status || (error as any).statusCode,
+                context: (error as any).context
+            });
+            throw new Error(`Connection Error: ${error.message} (Status: ${(error as any).status || 'unk'})`);
         }
 
         if (data?.success === false) {
