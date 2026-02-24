@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     subscription_status TEXT DEFAULT 'inactive', -- active, trialing, past_due, canceled
     invoices_sent_count INTEGER DEFAULT 0,
     invoice_limit INTEGER DEFAULT 5,
+    resend_api_key TEXT,
     stripe_customer_id TEXT,
     stripe_subscription_id TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
