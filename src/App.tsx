@@ -33,10 +33,6 @@ const AppInner: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
-
   return isMobile ? (
     <MobileApp
       activePage={activePage}
