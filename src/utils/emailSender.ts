@@ -57,20 +57,41 @@ export async function sendInvoiceEmail({
     const ts = new Date().getTime();
     console.log(`[ES-${ts}] Attempting to invoke "send-invoice-v2"...`);
 
+    console.log(`[ES-${ts}] Primary attempt: invoking "send-invoice-v2" via library...`);
+
     try {
         const { data, error } = await supabase.functions.invoke('send-invoice-v2', {
             body: payload
         });
 
         if (error) {
-            console.error(`[ES-${ts}] Detailed Invoke Error:`, {
-                message: error.message,
-                name: error.name,
-                status: (error as any).status || (error as any).statusCode || 'NO_STATUS',
-                details: (error as any).details || 'NO_DETAILS',
-                context: (error as any).context || 'NO_CONTEXT'
+            console.error(`[ES-${ts}] Library Invoke Error:`, error.message);
+            console.log(`[ES-${ts}] Falling back to Raw Fetch...`);
+
+            // Raw fetch attempt
+            const { data: { session } } = await supabase.auth.getSession();
+            const url = `https://pgqawzeejmgbwfrirtvw.supabase.co/functions/v1/send-invoice-v2`;
+
+            const rawRes = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token || (supabase as any).supabaseAnonKey || ''}`,
+                },
+                body: JSON.stringify(payload)
             });
-            throw new Error(`Connection Error: ${error.message} (Status: ${(error as any).status || 'unk'})`);
+
+            console.log(`[ES-${ts}] Raw Fetch Status:`, rawRes.status);
+            const rawData = await rawRes.json().catch(() => ({ error: 'Failed to parse JSON' }));
+            console.log(`[ES-${ts}] Raw Fetch Data:`, rawData);
+
+            if (!rawRes.ok) {
+                throw new Error(rawData.error || `Raw Fetch Failed (Status: ${rawRes.status})`);
+            }
+
+            if (rawData.success === false) throw new Error(rawData.error || 'Raw Fetch Business Error');
+            console.log(`[ES-${ts}] Raw Fetch Success!`);
+            return;
         }
 
         if (data?.success === false) {
@@ -78,7 +99,7 @@ export async function sendInvoiceEmail({
             throw new Error(data.error || 'Failed to send email');
         }
 
-        console.log(`[ES-${ts}] Success!`, data);
+        console.log(`[ES-${ts}] Library Invoke Success!`, data);
     } catch (err: any) {
         console.error(`[ES-${ts}] Final Catch:`, err);
         throw err;
