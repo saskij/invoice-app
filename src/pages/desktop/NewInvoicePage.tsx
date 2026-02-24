@@ -288,256 +288,257 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                                         {isAddingNewClient ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Client</>}
                                     </button>
                                 </div>
-
-                                {!isAddingNewClient ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        <div style={{ position: 'relative' }}>
-                                            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                                            <select
-                                                className="input-field"
-                                                style={{ paddingLeft: 36 }}
-                                                value={selectedClientId}
-                                                onChange={e => setSelectedClientId(e.target.value)}
-                                            >
-                                                <option value="">— Select a client —</option>
-                                                {clients.map(c => (
-                                                    <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ''}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {activeClient.id && (
-                                            <div className="animate-fade-in" style={{ padding: 16, borderRadius: 12, background: 'rgba(15, 23, 42, 0.3)', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                                                <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: 15, marginBottom: 4 }}>{activeClient.name}</div>
-                                                {activeClient.company && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 2 }}>{activeClient.company}</div>}
-                                                {activeClient.email && <div style={{ fontSize: 13, color: '#64748b' }}>{activeClient.email}</div>}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, animation: 'slide-down 0.2s ease-out' }}>
-                                        <input className="input-field" value={tempClient.name} onChange={e => setTempClient({ ...tempClient, name: e.target.value })} placeholder="Full Name *" />
-                                        <input className="input-field" value={tempClient.company} onChange={e => setTempClient({ ...tempClient, company: e.target.value })} placeholder="Company" />
-                                        <input className="input-field" value={tempClient.email} onChange={e => setTempClient({ ...tempClient, email: e.target.value })} placeholder="Email address" />
-                                        <input className="input-field" value={tempClient.phone} onChange={e => setTempClient({ ...tempClient, phone: e.target.value })} placeholder="Phone" />
-                                        <div style={{ gridColumn: '1 / -1', marginTop: 10 }}>
-                                            <button className="btn-primary w-full justify-center" onClick={handleCreateClient}>Create & Select Client</button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
-                            <div className="glass-card" style={{ padding: 24 }}>
-                                <h3 style={{ margin: '0 0 20px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Info</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label className="label">Invoice Number</label>
-                                        <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-001 (auto if empty)" />
+                            {!isAddingNewClient ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                                        <select
+                                            className="input-field"
+                                            style={{ paddingLeft: 36 }}
+                                            value={selectedClientId}
+                                            onChange={e => setSelectedClientId(e.target.value)}
+                                        >
+                                            <option value="">— Select a client —</option>
+                                            {clients.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ''}</option>
+                                            ))}
+                                        </select>
                                     </div>
-                                    <div>
-                                        <label className="label">Issue Date</label>
-                                        <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="label">Due Date</label>
-                                        <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                                    {activeClient.id && (
+                                        <div className="animate-fade-in" style={{ padding: 16, borderRadius: 12, background: 'rgba(15, 23, 42, 0.3)', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                                            <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: 15, marginBottom: 4 }}>{activeClient.name}</div>
+                                            {activeClient.company && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 2 }}>{activeClient.company}</div>}
+                                            {activeClient.email && <div style={{ fontSize: 13, color: '#64748b' }}>{activeClient.email}</div>}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, animation: 'slide-down 0.2s ease-out' }}>
+                                    <input className="input-field" value={tempClient.name} onChange={e => setTempClient({ ...tempClient, name: e.target.value })} placeholder="Full Name *" />
+                                    <input className="input-field" value={tempClient.company} onChange={e => setTempClient({ ...tempClient, company: e.target.value })} placeholder="Company" />
+                                    <input className="input-field" value={tempClient.email} onChange={e => setTempClient({ ...tempClient, email: e.target.value })} placeholder="Email address" />
+                                    <input className="input-field" value={tempClient.phone} onChange={e => setTempClient({ ...tempClient, phone: e.target.value })} placeholder="Phone" />
+                                    <div style={{ gridColumn: '1 / -1', marginTop: 10 }}>
+                                        <button className="btn-primary w-full justify-center" onClick={handleCreateClient}>Create & Select Client</button>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
-                        {/* Table: Line Items */}
-                        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                            <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Services & Items</h3>
-                                <button className="btn-primary" onClick={addLineItem}><Plus size={16} /> Add Line Item</button>
-                            </div>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ background: 'rgba(15, 23, 42, 0.4)' }}>
-                                            <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>Description</th>
-                                            <th style={{ padding: '12px 12px', textAlign: 'center', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 100 }}>Qty</th>
-                                            <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 140 }}>Price</th>
-                                            <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 140 }}>Total</th>
-                                            <th style={{ width: 60 }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {lineItems.map(item => (
-                                            <tr key={item.id} style={{ borderBottom: '1px solid rgba(99,102,241,0.06)' }}>
-                                                <td style={{ padding: '16px 24px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                        <select
-                                                            className="input-field"
-                                                            style={{ fontSize: 12, height: 32, padding: '0 8px' }}
-                                                            value={item.catalogServiceId || ''}
-                                                            onChange={e => applyFromCatalog(item.id, e.target.value)}
-                                                        >
-                                                            <option value="">Pick from catalog...</option>
-                                                            {catalog.map(s => <option key={s.id} value={s.id}>{s.name} ({fmt(s.defaultPrice)})</option>)}
-                                                        </select>
-                                                        <input
-                                                            className="input-field"
-                                                            value={item.description}
-                                                            onChange={e => updateLineItem(item.id, 'description', e.target.value)}
-                                                            placeholder="What are you billing for?"
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '16px 12px' }}>
-                                                    <input
-                                                        className="input-field text-center"
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={e => updateLineItem(item.id, 'quantity', Number(e.target.value))}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: '16px 12px' }}>
-                                                    <div style={{ position: 'relative' }}>
-                                                        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 13 }}>$</span>
-                                                        <input
-                                                            className="input-field"
-                                                            style={{ paddingLeft: 22, textAlign: 'right' }}
-                                                            type="number"
-                                                            value={item.unitPrice}
-                                                            onChange={e => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 700, color: '#f8fafc' }}>
-                                                    {fmt(item.total)}
-                                                </td>
-                                                <td style={{ paddingRight: 24, textAlign: 'right' }}>
-                                                    <button className="btn-danger" style={{ padding: 8 }} onClick={() => removeLineItem(item.id)}><Trash2 size={16} /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {lineItems.length === 0 && (
-                                            <tr>
-                                                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                                                    No items added yet. Click "Add Line Item" to start.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Footer: Notes & Terms */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
-                            <div className="glass-card" style={{ padding: 24 }}>
-                                <label className="label">Public Notes (shown on invoice)</label>
-                                <textarea
-                                    className="input-field"
-                                    rows={4}
-                                    value={notes}
-                                    onChange={e => setNotes(e.target.value)}
-                                    placeholder="Thanks for your business!"
-                                />
-                            </div>
-                            <div className="glass-card" style={{ padding: 24 }}>
-                                <label className="label">Terms & Payment Info</label>
-                                <textarea
-                                    className="input-field"
-                                    rows={4}
-                                    value={paymentTerms}
-                                    onChange={e => setPaymentTerms(e.target.value)}
-                                    placeholder="e.g. Net 30, Bank Transfer details"
-                                />
+                        <div className="glass-card" style={{ padding: 24 }}>
+                            <h3 style={{ margin: '0 0 20px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Info</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label className="label">Invoice Number</label>
+                                    <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-001 (auto if empty)" />
+                                </div>
+                                <div>
+                                    <label className="label">Issue Date</label>
+                                    <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="label">Due Date</label>
+                                    <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Sidebar: Totals & Actions */}
-                    <div style={{ position: 'sticky', top: 28, display: 'flex', flexDirection: 'column', gap: 28 }}>
-                        <div className="glass-card" style={{ padding: 24 }}>
-                            <h3 style={{ margin: '0 0 20px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Summary</h3>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                    <span style={{ color: '#94a3b8' }}>Subtotal</span>
-                                    <span style={{ color: '#f8fafc', fontWeight: 600 }}>{fmt(subtotal)}</span>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', gap: 6 }}>
-                                        <select
-                                            className="input-field"
-                                            style={{ fontSize: 11, height: 30, width: 50, padding: '0 4px' }}
-                                            value={discountType}
-                                            onChange={e => setDiscountType(e.target.value as any)}
-                                        >
-                                            <option value="percentage">%</option>
-                                            <option value="fixed">$</option>
-                                        </select>
-                                        <span style={{ fontSize: 13, color: '#94a3b8', alignSelf: 'center' }}>Discount</span>
-                                    </div>
-                                    <input
-                                        className="input-field text-right"
-                                        style={{ height: 30, fontSize: 13 }}
-                                        type="number"
-                                        value={discountValue}
-                                        onChange={e => setDiscountValue(Number(e.target.value))}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>
-                                    <span style={{ fontSize: 13, color: '#94a3b8' }}>Tax Rate (%)</span>
-                                    <input
-                                        className="input-field text-right"
-                                        style={{ height: 30, fontSize: 13 }}
-                                        type="number"
-                                        value={taxRate}
-                                        onChange={e => setTaxRate(Number(e.target.value))}
-                                    />
-                                </div>
-
-                                <div className="divider" style={{ margin: '8px 0' }} />
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>Total</span>
-                                    <span style={{ fontSize: 24, fontWeight: 900, color: '#818cf8', letterSpacing: '-0.02em' }}>{fmt(total)}</span>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
-                                <button className="btn-success w-full justify-center" style={{ padding: '12px' }} onClick={handleSendEmail} disabled={sending}>
-                                    <Send size={18} /> {sending ? 'Sending...' : 'Send Invoice'}
-                                </button>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                    <button className="btn-secondary justify-center" style={{ padding: '10px' }} onClick={() => setShowPreview(true)}>
-                                        <Eye size={18} /> Preview
-                                    </button>
-                                    <button className="btn-primary justify-center" style={{ padding: '10px' }} onClick={() => handleSave('draft')}>
-                                        <Save size={18} /> {editInvoice ? 'Update' : 'Save Draft'}
-                                    </button>
-                                </div>
-                                <button className="btn-secondary w-full justify-center" onClick={handleDownloadPDF}>
-                                    <Download size={18} /> Download PDF
-                                </button>
-                            </div>
+                    {/* Table: Line Items */}
+                    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Services & Items</h3>
+                            <button className="btn-primary" onClick={addLineItem}><Plus size={16} /> Add Line Item</button>
                         </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(15, 23, 42, 0.4)' }}>
+                                        <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>Description</th>
+                                        <th style={{ padding: '12px 12px', textAlign: 'center', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 100 }}>Qty</th>
+                                        <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 140 }}>Price</th>
+                                        <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: 11, color: '#64748b', textTransform: 'uppercase', width: 140 }}>Total</th>
+                                        <th style={{ width: 60 }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lineItems.map(item => (
+                                        <tr key={item.id} style={{ borderBottom: '1px solid rgba(99,102,241,0.06)' }}>
+                                            <td style={{ padding: '16px 24px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                    <select
+                                                        className="input-field"
+                                                        style={{ fontSize: 12, height: 32, padding: '0 8px' }}
+                                                        value={item.catalogServiceId || ''}
+                                                        onChange={e => applyFromCatalog(item.id, e.target.value)}
+                                                    >
+                                                        <option value="">Pick from catalog...</option>
+                                                        {catalog.map(s => <option key={s.id} value={s.id}>{s.name} ({fmt(s.defaultPrice)})</option>)}
+                                                    </select>
+                                                    <input
+                                                        className="input-field"
+                                                        value={item.description}
+                                                        onChange={e => updateLineItem(item.id, 'description', e.target.value)}
+                                                        placeholder="What are you billing for?"
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px 12px' }}>
+                                                <input
+                                                    className="input-field text-center"
+                                                    type="number"
+                                                    value={item.quantity}
+                                                    onChange={e => updateLineItem(item.id, 'quantity', Number(e.target.value))}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '16px 12px' }}>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 13 }}>$</span>
+                                                    <input
+                                                        className="input-field"
+                                                        style={{ paddingLeft: 22, textAlign: 'right' }}
+                                                        type="number"
+                                                        value={item.unitPrice}
+                                                        onChange={e => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 700, color: '#f8fafc' }}>
+                                                {fmt(item.total)}
+                                            </td>
+                                            <td style={{ paddingRight: 24, textAlign: 'right' }}>
+                                                <button className="btn-danger" style={{ padding: 8 }} onClick={() => removeLineItem(item.id)}><Trash2 size={16} /></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {lineItems.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                                                No items added yet. Click "Add Line Item" to start.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                        <div className="glass-card" style={{ padding: 20, background: 'rgba(99, 102, 241, 0.05)' }}>
-                            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
-                                <strong style={{ color: '#a5b4fc', display: 'block', marginBottom: 4 }}>Pro Tip:</strong>
-                                Invoices are automatically saved as drafts. You can always come back and edit them later.
-                            </div>
+                    {/* Footer: Notes & Terms */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+                        <div className="glass-card" style={{ padding: 24 }}>
+                            <label className="label">Public Notes (shown on invoice)</label>
+                            <textarea
+                                className="input-field"
+                                rows={4}
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                placeholder="Thanks for your business!"
+                            />
+                        </div>
+                        <div className="glass-card" style={{ padding: 24 }}>
+                            <label className="label">Terms & Payment Info</label>
+                            <textarea
+                                className="input-field"
+                                rows={4}
+                                value={paymentTerms}
+                                onChange={e => setPaymentTerms(e.target.value)}
+                                placeholder="e.g. Net 30, Bank Transfer details"
+                            />
                         </div>
                     </div>
                 </div>
 
-                {showPreview && (
-                    <InvoicePreviewModal
-                        invoice={buildInvoice()}
-                        company={settings.company}
-                        onClose={() => setShowPreview(false)}
-                        onDownload={handleDownloadPDF}
-                    />
-                )}
+                {/* Sidebar: Totals & Actions */}
+                <div style={{ position: 'sticky', top: 28, display: 'flex', flexDirection: 'column', gap: 28 }}>
+                    <div className="glass-card" style={{ padding: 24 }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Summary</h3>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                                <span style={{ color: '#94a3b8' }}>Subtotal</span>
+                                <span style={{ color: '#f8fafc', fontWeight: 600 }}>{fmt(subtotal)}</span>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    <select
+                                        className="input-field"
+                                        style={{ fontSize: 11, height: 30, width: 50, padding: '0 4px' }}
+                                        value={discountType}
+                                        onChange={e => setDiscountType(e.target.value as any)}
+                                    >
+                                        <option value="percentage">%</option>
+                                        <option value="fixed">$</option>
+                                    </select>
+                                    <span style={{ fontSize: 13, color: '#94a3b8', alignSelf: 'center' }}>Discount</span>
+                                </div>
+                                <input
+                                    className="input-field text-right"
+                                    style={{ height: 30, fontSize: 13 }}
+                                    type="number"
+                                    value={discountValue}
+                                    onChange={e => setDiscountValue(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, color: '#94a3b8' }}>Tax Rate (%)</span>
+                                <input
+                                    className="input-field text-right"
+                                    style={{ height: 30, fontSize: 13 }}
+                                    type="number"
+                                    value={taxRate}
+                                    onChange={e => setTaxRate(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="divider" style={{ margin: '8px 0' }} />
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>Total</span>
+                                <span style={{ fontSize: 24, fontWeight: 900, color: '#818cf8', letterSpacing: '-0.02em' }}>{fmt(total)}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
+                            <button className="btn-success w-full justify-center" style={{ padding: '12px' }} onClick={handleSendEmail} disabled={sending}>
+                                <Send size={18} /> {sending ? 'Sending...' : 'Send Invoice'}
+                            </button>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <button className="btn-secondary justify-center" style={{ padding: '10px' }} onClick={() => setShowPreview(true)}>
+                                    <Eye size={18} /> Preview
+                                </button>
+                                <button className="btn-primary justify-center" style={{ padding: '10px' }} onClick={() => handleSave('draft')}>
+                                    <Save size={18} /> {editInvoice ? 'Update' : 'Save Draft'}
+                                </button>
+                            </div>
+                            <button className="btn-secondary w-full justify-center" onClick={handleDownloadPDF}>
+                                <Download size={18} /> Download PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: 20, background: 'rgba(99, 102, 241, 0.05)' }}>
+                        <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+                            <strong style={{ color: '#a5b4fc', display: 'block', marginBottom: 4 }}>Pro Tip:</strong>
+                            Invoices are automatically saved as drafts. You can always come back and edit them later.
+                        </div>
+                    </div>
+                </div>
             </div>
-            );
+
+            {showPreview && (
+                <InvoicePreviewModal
+                    invoice={buildInvoice()}
+                    company={settings.company}
+                    onClose={() => setShowPreview(false)}
+                    onDownload={handleDownloadPDF}
+                />
+            )}
+        </div>
+    );
 };
 
-            export default NewInvoicePage;
+export default NewInvoicePage;
