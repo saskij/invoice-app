@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { Invoice, LineItem, Client } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Eye, Download, Send, Save, Search, X } from 'lucide-react';
+import { Plus, Trash2, Eye, Download, Send, Save, Search, X, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -338,6 +338,36 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
 
     return (
         <div className="animate-fade-in" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 28 }}>
+            {!user && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    borderRadius: 16,
+                    padding: '16px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    animation: 'slide-down 0.4s ease-out'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+                            <Zap size={24} />
+                        </div>
+                        <div>
+                            <h4 style={{ margin: 0, color: '#f8fafc', fontSize: 15, fontWeight: 700 }}>Save Your Progress & Get 5 Free Invoices</h4>
+                            <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: 13 }}>Authorize now to unlock your monthly limit and keep all your data synced across devices.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowAuthModal(true)}
+                        className="btn-primary"
+                        style={{ padding: '10px 20px', whiteSpace: 'nowrap' }}
+                    >
+                        Authorize Now
+                    </button>
+                </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 28, alignItems: 'start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                     {/* Header: Bill To & Invoice Info */}
@@ -445,11 +475,21 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                         </div>
                     </div>
 
-                    {/* Table: Line Items */}
                     <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Services & Items</h3>
-                            <button className="btn-primary" onClick={addLineItem}><Plus size={16} /> Add Line Item</button>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button
+                                    className="btn-secondary"
+                                    style={{ padding: '8px 16px', fontSize: 12, borderRadius: 10, border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171' }}
+                                    onClick={() => {
+                                        if (lineItems.length > 0 && window.confirm('Clear all line items?')) setLineItems([]);
+                                    }}
+                                >
+                                    <Trash2 size={16} /> Clear Items
+                                </button>
+                                <button className="btn-primary" onClick={addLineItem}><Plus size={16} /> Add Line Item</button>
+                            </div>
                         </div>
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

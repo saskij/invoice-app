@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { Invoice, LineItem, Client } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Eye, Send, Save, UserPlus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Eye, Send, Save, UserPlus, Search, X, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -338,6 +338,33 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
 
     return (
         <div className="animate-fade-in" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {!user && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    borderRadius: 16,
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    animation: 'slide-down 0.4s ease-out'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+                            <Zap size={20} />
+                        </div>
+                        <h4 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 700 }}>5 Free Invoices Monthy</h4>
+                    </div>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: 12, lineHeight: 1.5 }}>Authorize now to unlock your limit and sync data across devices.</p>
+                    <button
+                        onClick={() => setShowAuthModal(true)}
+                        className="btn-primary"
+                        style={{ padding: '8px 16px', fontSize: 13, width: '100%', justifyContent: 'center' }}
+                    >
+                        Authorize Now
+                    </button>
+                </div>
+            )}
             <div className="glass-card" style={{ padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Quick Templates</h3>
@@ -435,7 +462,17 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
             <div className="glass-card" style={{ padding: 0 }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Items</h3>
-                    <button className="btn-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={addLineItem}><Plus size={14} />Add Item</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 6, padding: '4px 8px', color: '#f87171', fontSize: 10, fontWeight: 700 }}
+                            onClick={() => {
+                                if (lineItems.length > 0 && window.confirm('Clear all items?')) setLineItems([]);
+                            }}
+                        >
+                            <Trash2 size={12} /> Clear
+                        </button>
+                        <button className="btn-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={addLineItem}><Plus size={14} />Item</button>
+                    </div>
                 </div>
                 {lineItems.map((item, i) => (
                     <div key={item.id} style={{ padding: '16px', borderTop: i === 0 ? 'none' : '1px solid rgba(99,102,241,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
