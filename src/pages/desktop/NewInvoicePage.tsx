@@ -50,7 +50,6 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [sending, setSending] = useState(false);
     const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
 
-    const nonDeletedInvoices = invoices.filter(i => i.status !== 'deleted');
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
