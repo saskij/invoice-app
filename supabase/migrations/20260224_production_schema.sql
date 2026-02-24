@@ -84,4 +84,15 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 7. NOTIFICATION: This schema is Stripe-ready (includes customer and subscription IDs)
+-- 7. BUSINESS LOGIC FUNCTIONS
+CREATE OR REPLACE FUNCTION public.increment_invoice_count(user_uuid UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.profiles
+    SET invoices_sent_count = invoices_sent_count + 1,
+        updated_at = NOW()
+    WHERE id = user_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 8. NOTIFICATION: This schema is Stripe-ready (includes customer and subscription IDs)
