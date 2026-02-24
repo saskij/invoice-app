@@ -265,6 +265,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         resend: sData.resend || DEFAULT_SETTINGS.resend,
                     });
                 }
+                // Profile & Usage
+                await fetchProfile();
+
                 // Catalog
                 const { data: cData } = await supabase.from('catalog').select('*').eq('user_id', user.id);
                 if (cData) setCatalog(cData);
