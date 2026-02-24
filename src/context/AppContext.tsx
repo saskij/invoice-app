@@ -282,7 +282,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
         };
         init();
-    }, [user, fetchClients, fetchDashboardData, fetchPage]);
+    }, [user, fetchProfile, fetchClients, fetchDashboardData, fetchPage]);
 
     const updateSettings = useCallback(async (newSettings: AppSettings) => {
         if (!user) return;

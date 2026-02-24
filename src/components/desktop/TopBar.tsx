@@ -1,5 +1,6 @@
-import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Crown, Zap } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
     dashboard: { title: 'Dashboard', subtitle: 'Overview of your invoices and revenue' },
@@ -15,6 +16,11 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
     const info = PAGE_TITLES[activePage] || { title: activePage, subtitle: '' };
+    const { profile } = useApp();
+    const { user, signOut } = useAuth();
+
+    const usagePercent = profile ? Math.min((profile.invoices_sent_count / profile.invoice_limit) * 100, 100) : 0;
+    const isFree = profile?.plan === 'free';
 
     return (
         <header style={{
@@ -34,7 +40,39 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                 </h1>
                 <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{info.subtitle}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                {profile && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        background: 'rgba(30, 41, 59, 0.5)',
+                        padding: '6px 14px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: isFree ? '#94a3b8' : '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {isFree ? 'Free Plan' : 'Pro Plan'}
+                                </span>
+                                {isFree ? <Zap size={10} className="text-slate-500" /> : <Crown size={10} className="text-amber-400" />}
+                            </div>
+                            <div style={{ width: 100, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div style={{
+                                    width: `${usagePercent}%`,
+                                    height: '100%',
+                                    background: usagePercent > 90 ? '#ef4444' : '#6366f1',
+                                    transition: 'width 0.5s ease-out'
+                                }}></div>
+                            </div>
+                            <span style={{ fontSize: 10, color: '#64748b' }}>
+                                {profile.invoices_sent_count} of {profile.invoice_limit} invoices
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 <button style={{
                     background: 'rgba(99,102,241,0.1)',
                     border: '1px solid rgba(99,102,241,0.2)',
@@ -47,21 +85,26 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                 }}>
                     <Bell size={16} />
                 </button>
-                <div style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: 'white',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                }}>
-                    {companyName ? companyName.slice(0, 2).toUpperCase() : 'YC'}
+                <div
+                    onClick={() => signOut()}
+                    title="Click to sign out"
+                    style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: user?.user_metadata?.avatar_url ? `url(${user.user_metadata.avatar_url}) center/cover` : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: 'white',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        border: '2px solid rgba(99,102,241,0.2)'
+                    }}
+                >
+                    {!user?.user_metadata?.avatar_url && (companyName ? companyName.slice(0, 2).toUpperCase() : 'YC')}
                 </div>
             </div>
         </header>
