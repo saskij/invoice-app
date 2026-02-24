@@ -544,6 +544,20 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                     onDownload={handleDownloadPDF}
                 />
             )}
+
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                title="Save & Send like a Pro"
+                subtitle="Join 1,000+ businesses and manage your invoices with ease."
+            />
+
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                currentCount={profile?.invoices_sent_count}
+                limit={profile?.invoice_limit}
+            />
         </div>
     );
 };
