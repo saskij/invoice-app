@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { LogIn, UserPlus, Mail, Lock, Loader2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -22,6 +22,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
+    // Sync isLogin with initialIsLogin when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setIsLogin(initialIsLogin);
+        }
+    }, [isOpen, initialIsLogin]);
+
+    // ESC key listener
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleEsc);
+        }
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
+    // Prevent body scroll when open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        return () => { document.body.style.overflow = 'auto'; };
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -68,8 +96,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
-            onClick={onClose}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
         >
             <div
                 className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
@@ -79,7 +109,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
                 <button
-                    onClick={onClose}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                    }}
                     className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
                     aria-label="Close modal"
                 >
