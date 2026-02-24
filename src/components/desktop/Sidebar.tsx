@@ -4,6 +4,8 @@ import {
     FilePlus,
     FileText,
     Settings,
+    Users,
+    Book,
     Zap,
 } from 'lucide-react';
 
@@ -11,6 +13,8 @@ const NAV_ITEMS = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'new-invoice', label: 'New Invoice', icon: FilePlus },
     { id: 'invoices', label: 'All Invoices', icon: FileText },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'catalog', label: 'Catalog', icon: Book },
     { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

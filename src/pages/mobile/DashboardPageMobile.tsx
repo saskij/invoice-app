@@ -8,6 +8,7 @@ import {
     TrendingUp,
     FilePlus,
     AlertCircle,
+    Loader2
 } from 'lucide-react';
 
 interface DashboardPageMobileProps {
@@ -15,9 +16,15 @@ interface DashboardPageMobileProps {
 }
 
 const DashboardPageMobile: React.FC<DashboardPageMobileProps> = ({ onNavigate }) => {
-    const { dashboardData, settings, invoices } = useApp();
+    const { dashboardData, settings, invoices, loading } = useApp();
 
-    if (!dashboardData) return null;
+    if (loading || !dashboardData) {
+        return (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh' }}>
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
 
     const { totalRevenue, pendingAmount, overdueAmount, paidCount, recentInvoices } = dashboardData;
 

@@ -8,7 +8,7 @@ import { useAuth } from './context/AuthContext';
 import type { Invoice } from './types';
 import { Loader2 } from 'lucide-react';
 
-type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
+type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog';
 
 const AppInner: React.FC = () => {
   const { loading } = useAuth();

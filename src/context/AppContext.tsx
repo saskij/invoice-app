@@ -68,8 +68,9 @@ interface AppContextType {
     saveClient: (client: Client) => Promise<string | null>;
     deleteClient: (id: string) => Promise<void>;
     fetchClients: () => Promise<void>;
-    activePage: 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
-    setActivePage: (page: 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients') => void;
+    activePage: 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog';
+    setActivePage: (page: 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog') => void;
+    loading: boolean;
     currentPage: number;
     totalCount: number;
     pageSize: number;
@@ -104,7 +105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const saved = localStorage.getItem('invoice_app_draft');
         return saved ? JSON.parse(saved) : null;
     });
-    const [activePage, setActivePage] = useState<'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients'>(() => {
+    const [activePage, setActivePage] = useState<'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog'>(() => {
         const saved = localStorage.getItem('invoice_app_active_page');
         return (saved as any) || 'dashboard';
     });
@@ -444,7 +445,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             currentPage, totalCount, pageSize, fetchPage,
             searchQuery, setSearchQuery, statusFilter, setStatusFilter,
             dashboardData, fetchDashboardData,
-            profile, fetchProfile
+            profile, fetchProfile,
+            loading
         }}>
             {children}
         </AppContext.Provider>
