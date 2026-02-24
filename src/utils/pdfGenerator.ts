@@ -252,13 +252,43 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
 
         y += activeRows.length * rowH + 32;
 
+        // ── Payment Link Button ──────────────────────────────────────────────
+        if (invoice.paymentLink) {
+            const btnWidth = 220;
+            const btnHeight = 38;
+            const btnX = margin;
+            const btnY = y;
+            const GREEN: [number, number, number] = [22, 163, 74];
+
+            // Green button background
+            doc.setFillColor(...GREEN);
+            doc.roundedRect(btnX, btnY, btnWidth, btnHeight, 8, 8, 'F');
+
+            // Button label
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(255, 255, 255);
+            doc.text('✦  Subscribe Now / Pay', btnX + btnWidth / 2, btnY + btnHeight / 2 + 5, { align: 'center' });
+
+            // Make the entire button area a clickable hyperlink
+            doc.link(btnX, btnY, btnWidth, btnHeight, { url: invoice.paymentLink });
+
+            // URL text below button (for reference)
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...GRAY_COLOR);
+            doc.text(invoice.paymentLink, btnX, btnY + btnHeight + 14);
+            // Make the URL text clickable too
+            doc.link(btnX, btnY + btnHeight + 4, contentWidth, 12, { url: invoice.paymentLink });
+
+            y += btnHeight + 30;
+        }
+
         // ── Notes / Terms / Payment Info ──────────────────────────────────────
         if (invoice.notes || invoice.paymentTerms || invoice.paymentInfo) {
-            // Calculate dynamic columns based on content
             const columnData = [];
             if (invoice.notes) columnData.push({ title: 'NOTES', content: invoice.notes });
             if (invoice.paymentTerms) columnData.push({ title: 'PAYMENT TERMS', content: invoice.paymentTerms });
-            if (invoice.paymentLink) columnData.push({ title: 'PAY / SUBSCRIBE', content: `Link: ${invoice.paymentLink}\n\nScan QR or click link above to pay.` });
             if (invoice.paymentInfo) columnData.push({ title: 'HOW TO PAY', content: invoice.paymentInfo });
 
             const colWidth = contentWidth / columnData.length - 10;
