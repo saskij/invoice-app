@@ -1,3 +1,11 @@
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useApp } from '../../context/AppContext';
+import type { Invoice, LineItem, Client } from '../../types';
+import { v4 as uuidv4 } from 'uuid';
+import { Plus, Trash2, Eye, Send, Save, UserPlus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
+import { sendInvoiceEmail } from '../../utils/emailSender';
 import InvoicePreviewModal from '../../components/Invoice/InvoicePreviewModal';
 import { AuthModal } from '../../components/Shared/AuthModal';
 import { UpgradeModal } from '../../components/Shared/UpgradeModal';
@@ -43,7 +51,6 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
 
     const [showExtraFields, setShowExtraFields] = useState(false);
 
-    const nonDeletedInvoices = invoices.filter(i => i.status !== 'deleted');
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 

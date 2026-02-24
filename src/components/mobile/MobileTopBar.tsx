@@ -11,7 +11,6 @@ interface MobileTopBarProps {
 
 const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onOpenMenu, title }) => {
     const { profile } = useApp();
-    const { user } = useAuth();
     const isFree = profile?.plan === 'free';
     const usage = profile ? `${profile.invoices_sent_count}/${profile.invoice_limit}` : '';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Check, X, Zap, ArrowRight } from 'lucide-react';
+import { Crown, Check, X, ArrowRight } from 'lucide-react';
 
 interface UpgradeModalProps {
     isOpen: boolean;
