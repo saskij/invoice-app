@@ -10,6 +10,65 @@ import InvoicePreviewModal from '../../components/Invoice/InvoicePreviewModal';
 import { AuthModal } from '../../components/Shared/AuthModal';
 import { UpgradeModal } from '../../components/Shared/UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
+import { Layout, Palette, ShoppingCart, Globe, ShieldCheck } from 'lucide-react';
+
+const SERVICE_TEMPLATES = [
+    {
+        id: 'full-stack',
+        name: 'Full-Stack Development',
+        icon: Layout,
+        items: [
+            { description: 'Custom Web Application Development (Frontend + Backend)', quantity: 1, unitPrice: 5000 },
+            { description: 'Database Schema Design & Implementation', quantity: 1, unitPrice: 1500 },
+            { description: 'API Integration & Third-party Services', quantity: 1, unitPrice: 1000 }
+        ],
+        notes: 'Includes 3 months of technical support and hosting setup.'
+    },
+    {
+        id: 'landing-page',
+        name: 'High-Conversion Landing Page',
+        icon: Globe,
+        items: [
+            { description: 'Strategic UI/UX Design & Wireframing', quantity: 1, unitPrice: 800 },
+            { description: 'Responsive Frontend Development (React/Next.js)', quantity: 1, unitPrice: 1200 },
+            { description: 'SEO Framework & Performance Optimization', quantity: 1, unitPrice: 500 }
+        ],
+        notes: 'Optimized for mobile and fast loading speeds.'
+    },
+    {
+        id: 'ecommerce',
+        name: 'E-Commerce Solution',
+        icon: ShoppingCart,
+        items: [
+            { description: 'E-commerce Platform Setup & Configuration', quantity: 1, unitPrice: 2000 },
+            { description: 'Payment Gateway Integration (Stripe/PayPal)', quantity: 1, unitPrice: 800 },
+            { description: 'Product Catalog Management System', quantity: 1, unitPrice: 1200 }
+        ],
+        notes: 'Secure checkout and inventory management included.'
+    },
+    {
+        id: 'ui-ux',
+        name: 'UI/UX Design Phase',
+        icon: Palette,
+        items: [
+            { description: 'User Research & Persona Development', quantity: 1, unitPrice: 600 },
+            { description: 'High-Fidelity UI Mockups (Figma)', quantity: 1, unitPrice: 1500 },
+            { description: 'Interactive Prototyping & Feedback Loop', quantity: 1, unitPrice: 900 }
+        ],
+        notes: 'Includes 2 rounds of design revisions.'
+    },
+    {
+        id: 'maintenance',
+        name: 'Monthly Maintenance',
+        icon: ShieldCheck,
+        items: [
+            { description: 'Security Updates & Dependency Management', quantity: 1, unitPrice: 300 },
+            { description: 'Performance Monitoring & Monthly Backups', quantity: 1, unitPrice: 200 },
+            { description: 'Technical Content Updates (up to 5 hours)', quantity: 1, unitPrice: 500 }
+        ],
+        paymentTerms: 'Payment due on the 1st of each month.'
+    }
+];
 
 interface NewInvoicePageProps {
     editInvoice?: Invoice | null;
@@ -131,6 +190,24 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const removeLineItem = useCallback((id: string) => {
         setLineItems(prev => prev.filter(i => i.id !== id));
     }, []);
+
+    const applyTemplate = (templateId: string) => {
+        const template = SERVICE_TEMPLATES.find(t => t.id === templateId);
+        if (!template) return;
+
+        if (lineItems.length > 0 && !window.confirm('Applying a template will replace your current line items. Continue?')) return;
+
+        const newItems = template.items.map(item => ({
+            ...item,
+            id: uuidv4(),
+            total: item.quantity * item.unitPrice
+        }));
+
+        setLineItems(newItems);
+        if (template.notes) setNotes(template.notes);
+        if (template.paymentTerms) setPaymentTerms(template.paymentTerms);
+        toast.success(`${template.name} template applied!`);
+    };
 
     const applyFromCatalog = useCallback((lineId: string, serviceId: string) => {
         const svc = catalog.find(c => c.id === serviceId);
@@ -335,20 +412,35 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                         </div>
 
                         <div className="glass-card" style={{ padding: 24 }}>
-                            <h3 style={{ margin: '0 0 20px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Invoice Info</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label className="label">Invoice Number</label>
-                                    <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-001 (auto if empty)" />
-                                </div>
-                                <div>
-                                    <label className="label">Issue Date</label>
-                                    <input className="input-field" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className="label">Due Date</label>
-                                    <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-                                </div>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick Templates</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                                {SERVICE_TEMPLATES.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => applyTemplate(t.id)}
+                                        style={{
+                                            padding: '12px 10px',
+                                            borderRadius: 12,
+                                            background: 'rgba(30, 41, 59, 0.5)',
+                                            border: '1px solid rgba(99, 102, 241, 0.1)',
+                                            color: '#f8fafc',
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                        className="hover:border-indigo-500/50 hover:bg-slate-800/80 group"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                            <t.icon size={16} />
+                                        </div>
+                                        <span className="text-center leading-tight">{t.name}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
