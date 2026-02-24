@@ -1,6 +1,5 @@
 import { Menu, Plus, Zap, Crown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
 
 interface MobileTopBarProps {
     activePage: string;
