@@ -254,32 +254,34 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
 
         // ── Payment Link Button ──────────────────────────────────────────────
         if (invoice.paymentLink) {
-            const btnWidth = 220;
-            const btnHeight = 38;
+            const btnWidth = contentWidth;
+            const btnHeight = 42;
             const btnX = margin;
             const btnY = y;
             const GREEN: [number, number, number] = [22, 163, 74];
 
-            // Green button background
+            // Green button background (full width, rounded)
             doc.setFillColor(...GREEN);
-            doc.roundedRect(btnX, btnY, btnWidth, btnHeight, 8, 8, 'F');
+            doc.roundedRect(btnX, btnY, btnWidth, btnHeight, 6, 6, 'F');
 
-            // Button label
+            // Button label — ASCII only, centered
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(13);
+            doc.setFontSize(14);
             doc.setTextColor(255, 255, 255);
-            doc.text('✦  Subscribe Now / Pay', btnX + btnWidth / 2, btnY + btnHeight / 2 + 5, { align: 'center' });
+            doc.text('Subscribe Now  /  Pay Online', btnX + btnWidth / 2, btnY + btnHeight / 2 + 5, { align: 'center' });
 
-            // Make the entire button area a clickable hyperlink
+            // Clickable hyperlink covering the entire button
             doc.link(btnX, btnY, btnWidth, btnHeight, { url: invoice.paymentLink });
 
-            // URL text below button (for reference)
+            // URL reference below button (small, muted, also clickable)
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(8);
             doc.setTextColor(...GRAY_COLOR);
-            doc.text(invoice.paymentLink, btnX, btnY + btnHeight + 14);
-            // Make the URL text clickable too
-            doc.link(btnX, btnY + btnHeight + 4, contentWidth, 12, { url: invoice.paymentLink });
+            const shortUrl = invoice.paymentLink.length > 70
+                ? invoice.paymentLink.slice(0, 67) + '...'
+                : invoice.paymentLink;
+            doc.text(shortUrl, btnX + btnWidth / 2, btnY + btnHeight + 14, { align: 'center' });
+            doc.link(btnX, btnY + btnHeight + 4, btnWidth, 14, { url: invoice.paymentLink });
 
             y += btnHeight + 30;
         }
