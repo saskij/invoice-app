@@ -321,7 +321,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 subscription_status: newSettings.subscriptionStatus,
                 invoice_limit: newSettings.invoiceLimit,
                 resend: newSettings.resend,
-                updatedAt: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             });
         } catch (error) { toast.error('Failed to save settings.'); }
     }, [user]);
@@ -330,13 +330,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!user) return;
         const newItem = { ...item, id: uuidv4(), user_id: user.id };
         setCatalog(prev => [...prev, newItem]);
-        await supabase.from('catalog').insert(newItem);
+        await supabase.from('catalog').insert({
+            id: newItem.id,
+            user_id: user.id,
+            name: newItem.name,
+            description: newItem.description,
+            default_price: newItem.defaultPrice,
+            unit: newItem.unit,
+            updated_at: new Date().toISOString()
+        });
     }, [user]);
 
     const updateCatalogItem = useCallback(async (item: CatalogService) => {
         if (!user) return;
         setCatalog(prev => prev.map(s => s.id === item.id ? item : s));
-        await supabase.from('catalog').update({ ...item }).eq('id', item.id).eq('user_id', user.id);
+        await supabase.from('catalog').update({
+            name: item.name,
+            description: item.description,
+            default_price: item.defaultPrice,
+            unit: item.unit,
+            updated_at: new Date().toISOString()
+        }).eq('id', item.id).eq('user_id', user.id);
     }, [user]);
 
     const removeCatalogItem = useCallback(async (id: string) => {
@@ -349,24 +363,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!user) return;
         const isNew = !invoices.find(i => i.id === invoice.id);
 
-        // Sanitize payload: Remove virtual fields and obsolete columns
-        // only keep what belongs in the physical 'invoices' table
-        const {
-            client, clientName, clientCompany, clientEmail, clientPhone, clientAddress,
-            clientCity, clientState, clientZip, balanceDue, displayStatus,
-            discountAmount, taxAmount, subtotal,
-            discountType, discountValue, taxRate,
-            ...dbPayload
-        } = invoice as any;
+        // Map camelCase to snake_case for DB
+        const dbPayload = {
+            id: invoice.id,
+            user_id: user.id,
+            client_id: invoice.client_id,
+            invoice_number: invoice.invoiceNumber,
+            issue_date: invoice.issueDate,
+            due_date: invoice.dueDate,
+            discount_type: invoice.discountType,
+            discount_value: invoice.discountValue,
+            discount_amount: invoice.discountAmount || 0,
+            tax_rate: invoice.taxRate,
+            tax_amount: invoice.taxAmount || 0,
+            subtotal: invoice.subtotal || 0,
+            total: invoice.total,
+            notes: invoice.notes,
+            payment_terms: invoice.paymentTerms,
+            payment_info: invoice.paymentInfo,
+            status: invoice.status,
+            paid_amount: invoice.paidAmount || 0,
+            payment_date: invoice.paymentDate,
+            line_items: invoice.lineItems,
+            updated_at: new Date().toISOString()
+        };
 
-        console.log('[AC] Attempting to save sanitized invoice:', dbPayload);
+        console.log('[AC] Attempting to save mapped invoice:', dbPayload);
 
         try {
-            const { error } = await supabase.from('invoices').upsert({
-                ...dbPayload,
-                user_id: user.id,
-                updatedAt: new Date().toISOString()
-            });
+            const { error } = await supabase.from('invoices').upsert(dbPayload);
 
             if (error) {
                 console.error('[AC] Supabase Upsert Error:', error);
@@ -382,7 +407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const deleteInvoice = useCallback(async (id: string) => {
         if (!user) return;
-        await supabase.from('invoices').update({ status: 'deleted', updatedAt: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
+        await supabase.from('invoices').update({ status: 'deleted', updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
         await Promise.all([fetchDashboardData(), fetchPage(currentPage)]);
     }, [user, currentPage, fetchPage, fetchDashboardData]);
 
@@ -394,7 +419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const restoreInvoice = useCallback(async (id: string) => {
         if (!user) return;
-        await supabase.from('invoices').update({ status: 'draft', updatedAt: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
+        await supabase.from('invoices').update({ status: 'draft', updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
         await Promise.all([fetchDashboardData(), fetchPage(currentPage)]);
     }, [user, currentPage, fetchPage, fetchDashboardData]);
 
@@ -415,7 +440,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saveClient = useCallback(async (client: Client): Promise<string | null> => {
         if (!user) return null;
         try {
-            const { data, error } = await supabase.from('clients').upsert({ ...client, user_id: user.id, updatedAt: new Date().toISOString() }).select().single();
+            const { data, error } = await supabase.from('clients').upsert({
+                id: client.id || undefined,
+                user_id: user.id,
+                name: client.name,
+                email: client.email,
+                phone: client.phone,
+                company: client.company,
+                address: client.address,
+                city: client.city,
+                state: client.state,
+                zip: client.zip,
+                updated_at: new Date().toISOString()
+            }).select().single();
             if (error) throw error;
             await fetchClients();
             return data.id;
