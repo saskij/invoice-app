@@ -6,13 +6,12 @@ import DesktopApp from './components/DesktopApp';
 import MobileApp from './components/MobileApp';
 import { useAuth } from './context/AuthContext';
 import type { Invoice } from './types';
-import { AuthPage } from './pages/AuthPage';
 import { Loader2 } from 'lucide-react';
 
 type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients';
 
 const AppInner: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const { draftInvoice, setDraftInvoice, activePage, setActivePage } = useApp();
   const isMobile = useIsMobile();
 
