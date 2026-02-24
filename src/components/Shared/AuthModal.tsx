@@ -67,14 +67,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-            <div className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl overflow-hidden">
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+            onClick={onClose}
+        >
+            <div
+                className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Decorative Gradient */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
+                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
+                    aria-label="Close modal"
                 >
                     <X size={20} />
                 </button>
