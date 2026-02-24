@@ -1,5 +1,6 @@
-import React from 'react';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, Zap, Crown } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface MobileTopBarProps {
     activePage: string;
@@ -9,6 +10,11 @@ interface MobileTopBarProps {
 }
 
 const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onOpenMenu, title }) => {
+    const { profile } = useApp();
+    const { user } = useAuth();
+    const isFree = profile?.plan === 'free';
+    const usage = profile ? `${profile.invoices_sent_count}/${profile.invoice_limit}` : '';
+
     const getPageTitle = (page: string) => {
         switch (page) {
             case 'dashboard': return 'Dashboard';
@@ -31,12 +37,22 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ activePage, onNavigate, onO
                 <h1 className="text-lg font-semibold text-white">
                     {getPageTitle(activePage)}
                 </h1>
-                <button
-                    onClick={() => onNavigate('new-invoice')}
-                    className="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
-                >
-                    <Plus className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-3">
+                    {profile && (
+                        <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded-md border border-white/5">
+                            {isFree ? <Zap size={12} className="text-slate-400" /> : <Crown size={12} className="text-amber-400" />}
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">
+                                {usage}
+                            </span>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => onNavigate('new-invoice')}
+                        className="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
         </header>
     );
