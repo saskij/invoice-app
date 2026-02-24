@@ -203,6 +203,33 @@ const InvoicePreviewModal: React.FC<Props> = ({ invoice, company, onClose, onDow
                                     <span style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>TOTAL DUE</span>
                                     <span style={{ fontSize: 16, fontWeight: 900, color: 'white' }}>{fmt(invoice.balanceDue ?? invoice.total)}</span>
                                 </div>
+
+                                {invoice.paymentLink && (
+                                    <a
+                                        href={invoice.paymentLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '12px 16px',
+                                            background: '#10b981',
+                                            color: 'white',
+                                            borderRadius: '8px',
+                                            marginTop: 12,
+                                            textDecoration: 'none',
+                                            fontSize: 14,
+                                            fontWeight: 700,
+                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <span>{invoice.paymentLink.includes('subscription') || invoice.total < 100 ? 'Subscribe Now' : 'Pay Now'}</span>
+                                            <span style={{ fontSize: 9, opacity: 0.8, fontWeight: 400 }}>Automatic monthly billing</span>
+                                        </div>
+                                    </a>
+                                )}
                             </div>
                         </div>
 

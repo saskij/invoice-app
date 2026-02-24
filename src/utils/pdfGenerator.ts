@@ -258,6 +258,7 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
             const columnData = [];
             if (invoice.notes) columnData.push({ title: 'NOTES', content: invoice.notes });
             if (invoice.paymentTerms) columnData.push({ title: 'PAYMENT TERMS', content: invoice.paymentTerms });
+            if (invoice.paymentLink) columnData.push({ title: 'PAY / SUBSCRIBE', content: `Link: ${invoice.paymentLink}\n\nScan QR or click link above to pay.` });
             if (invoice.paymentInfo) columnData.push({ title: 'HOW TO PAY', content: invoice.paymentInfo });
 
             const colWidth = contentWidth / columnData.length - 10;

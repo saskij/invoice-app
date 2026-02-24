@@ -97,6 +97,7 @@ export interface Invoice {
     paidAmount?: number;
     paymentDate?: string;
     balanceDue?: number;
+    paymentLink?: string;
     displayStatus?: InvoiceStatus;
     client_id?: string;
     clientName?: string;

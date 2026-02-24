@@ -384,6 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: invoice.status,
             paid_amount: invoice.paidAmount || 0,
             payment_date: invoice.paymentDate,
+            payment_link: invoice.paymentLink,
             line_items: invoice.lineItems,
             updated_at: new Date().toISOString()
         };

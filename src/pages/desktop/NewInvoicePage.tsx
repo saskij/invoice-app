@@ -66,6 +66,16 @@ const SERVICE_TEMPLATES = [
             { description: 'Technical Content Updates (up to 5 hours)', quantity: 1, unitPrice: 500 }
         ],
         paymentTerms: 'Payment due on the 1st of each month.'
+    },
+    {
+        id: 'hosting-subscription',
+        name: 'Hosting & Maintenance',
+        icon: Globe,
+        items: [
+            { description: 'Monthly Hosting & Maintenance Subscription', quantity: 1, unitPrice: 20 },
+        ],
+        notes: 'Monthly subscription for hosting and basic technical maintenance. Funds will be deducted automatically each month.',
+        paymentLink: 'https://buy.stripe.com/6oU7sLa6i2aifEwd2Z57W02'
     }
 ];
 
@@ -104,6 +114,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [notes, setNotes] = useState(initialData?.notes || '');
     const [paymentTerms, setPaymentTerms] = useState(initialData?.paymentTerms || settings.defaultPaymentTerms || '');
     const [paymentInfo] = useState(initialData?.paymentInfo || settings.paymentInfo || '');
+    const [paymentLink, setPaymentLink] = useState(initialData?.paymentLink || '');
     const [showPreview, setShowPreview] = useState(false);
     const [sending, setSending] = useState(false);
     const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
@@ -141,7 +152,8 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
             taxRate,
             notes,
             paymentTerms,
-            paymentInfo
+            paymentInfo,
+            paymentLink
         };
         const orig = initialData || {};
         const baseLineItems = JSON.stringify(orig.lineItems || []);
@@ -155,8 +167,9 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
             currentData.taxRate !== (orig.taxRate ?? (settings.defaultTaxRate ?? 0)) ||
             currentData.notes !== (orig.notes || '') ||
             currentData.paymentTerms !== (orig.paymentTerms || settings.defaultPaymentTerms || '') ||
-            currentData.paymentInfo !== (orig.paymentInfo || settings.paymentInfo || '');
-    }, [selectedClientId, lineItems, issueDate, dueDate, discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, initialData, today, thirtyDays, settings]);
+            currentData.paymentInfo !== (orig.paymentInfo || settings.paymentInfo || '') ||
+            currentData.paymentLink !== (orig.paymentLink || '');
+    }, [selectedClientId, lineItems, issueDate, dueDate, discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, paymentLink, initialData, today, thirtyDays, settings]);
 
     // Browser unload protection
     useEffect(() => {
@@ -204,6 +217,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
         setLineItems(newItems);
         if (template.notes) setNotes(template.notes);
         if (template.paymentTerms) setPaymentTerms(template.paymentTerms);
+        if ((template as any).paymentLink) setPaymentLink((template as any).paymentLink);
         toast.success(`${template.name} template applied!`);
     };
 
@@ -236,6 +250,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
         notes,
         paymentTerms,
         paymentInfo,
+        paymentLink,
         status,
         createdAt: editInvoice?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -245,7 +260,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
         setDraftInvoice(buildInvoice());
     }, [
         invoiceId, invoiceNumber, selectedClientId, lineItems, issueDate, dueDate,
-        discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, status,
+        discountType, discountValue, taxRate, notes, paymentTerms, paymentInfo, paymentLink, status,
         setDraftInvoice
     ]);
 
@@ -596,6 +611,17 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                                 <span style={{ color: '#94a3b8' }}>Subtotal</span>
                                 <span style={{ color: '#f8fafc', fontWeight: 600 }}>{fmt(subtotal)}</span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <label style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Payment Link / Subscription</label>
+                                <input
+                                    className="input-field"
+                                    style={{ fontSize: 12, height: 32 }}
+                                    value={paymentLink}
+                                    onChange={e => setPaymentLink(e.target.value)}
+                                    placeholder="https://buy.stripe.com/..."
+                                />
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>
