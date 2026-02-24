@@ -164,6 +164,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [user]);
 
+    const fetchProfile = useCallback(async () => {
+        if (!user) { setProfile(null); return; }
+        try {
+            const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            if (error) {
+                console.warn('[AC] Profile not found, using defaults');
+                setProfile({ plan: 'free', invoices_sent_count: 0, invoice_limit: 5 });
+            } else {
+                setProfile(data);
+            }
+        } catch (err) {
+            console.error('[AC] fetchProfile catch:', err);
+        }
+    }, [user]);
+
     const fetchClients = useCallback(async () => {
         if (!user) return;
         try {
@@ -418,7 +433,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             activePage, setActivePage,
             currentPage, totalCount, pageSize, fetchPage,
             searchQuery, setSearchQuery, statusFilter, setStatusFilter,
-            dashboardData, fetchDashboardData
+            dashboardData, fetchDashboardData,
+            profile, fetchProfile
         }}>
             {children}
         </AppContext.Provider>
