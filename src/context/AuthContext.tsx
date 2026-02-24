@@ -7,6 +7,10 @@ interface AuthContextType {
     session: Session | null;
     loading: boolean;
     signOut: () => Promise<void>;
+    isAuthModalOpen: boolean;
+    authModalTab: 'login' | 'signup';
+    openAuthModal: (tab?: 'login' | 'signup') => void;
+    closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +19,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('signup');
 
     useEffect(() => {
         // Check active sessions and sets the user
@@ -29,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(session);
             setUser(session?.user ?? null);
             setLoading(false);
+            if (session) setIsAuthModalOpen(false); // Close modal on success
         });
 
         return () => subscription.unsubscribe();
@@ -38,8 +45,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.auth.signOut();
     };
 
+    const openAuthModal = (tab: 'login' | 'signup' = 'signup') => {
+        setAuthModalTab(tab);
+        setIsAuthModalOpen(true);
+    };
+
+    const closeAuthModal = () => {
+        setIsAuthModalOpen(false);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, session, loading, signOut }}>
+        <AuthContext.Provider value={{
+            user,
+            session,
+            loading,
+            signOut,
+            isAuthModalOpen,
+            authModalTab,
+            openAuthModal,
+            closeAuthModal
+        }}>
             {children}
         </AuthContext.Provider>
     );

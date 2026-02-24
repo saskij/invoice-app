@@ -1,7 +1,6 @@
 import { Bell, Crown, Zap, LogOut, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { AuthModal } from '../Shared/AuthModal';
 import React, { useState } from 'react';
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -19,9 +18,7 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
     const info = PAGE_TITLES[activePage] || { title: activePage, subtitle: '' };
     const { profile } = useApp();
-    const { user, signOut } = useAuth();
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('signup');
+    const { user, signOut, openAuthModal } = useAuth();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     const usagePercent = profile ? Math.min((profile.invoices_sent_count / profile.invoice_limit) * 100, 100) : 0;
@@ -132,7 +129,7 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                     ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <button
-                                onClick={() => { setAuthModalTab('login'); setIsAuthModalOpen(true); }}
+                                onClick={() => openAuthModal('login')}
                                 style={{
                                     background: 'none',
                                     border: 'none',
@@ -147,7 +144,7 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                                 Sign In
                             </button>
                             <button
-                                onClick={() => { setAuthModalTab('signup'); setIsAuthModalOpen(true); }}
+                                onClick={() => openAuthModal('signup')}
                                 className="btn-primary"
                                 style={{ padding: '8px 20px', fontSize: 13, borderRadius: 10, boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
                             >
@@ -205,11 +202,6 @@ const TopBar: React.FC<TopBarProps> = ({ activePage, companyName }) => {
                     )}
                 </div>
 
-                <AuthModal
-                    isOpen={isAuthModalOpen}
-                    initialIsLogin={authModalTab === 'login'}
-                    onClose={() => setIsAuthModalOpen(false)}
-                />
             </div>
         </header>
     );

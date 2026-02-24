@@ -5,18 +5,20 @@ import { useIsMobile } from './hooks/useMediaQuery';
 import DesktopApp from './components/DesktopApp';
 import MobileApp from './components/MobileApp';
 import { useAuth } from './context/AuthContext';
+import { AuthModal } from './components/Shared/AuthModal';
 import type { Invoice } from './types';
 import { Loader2 } from 'lucide-react';
 
 type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog';
 
 const AppInner: React.FC = () => {
-  const { loading } = useAuth();
+  const { loading, isAuthModalOpen, closeAuthModal, authModalTab } = useAuth();
   const { draftInvoice, setDraftInvoice, activePage, setActivePage } = useApp();
   const isMobile = useIsMobile();
 
   const handleNavigate = (page: string) => {
     setActivePage(page as Page);
+    closeAuthModal(); // Auto-close on navigation
   };
 
   const handleEditInvoice = (invoice: Invoice) => {
@@ -32,22 +34,31 @@ const AppInner: React.FC = () => {
     );
   }
 
-  return isMobile ? (
-    <MobileApp
-      activePage={activePage}
-      editingInvoice={draftInvoice as Invoice | null}
-      handleNavigate={handleNavigate}
-      handleEditInvoice={handleEditInvoice}
-      setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
-    />
-  ) : (
-    <DesktopApp
-      activePage={activePage}
-      editingInvoice={draftInvoice as Invoice | null}
-      handleNavigate={handleNavigate}
-      handleEditInvoice={handleEditInvoice}
-      setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
-    />
+  return (
+    <>
+      {isMobile ? (
+        <MobileApp
+          activePage={activePage}
+          editingInvoice={draftInvoice as Invoice | null}
+          handleNavigate={handleNavigate}
+          handleEditInvoice={handleEditInvoice}
+          setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
+        />
+      ) : (
+        <DesktopApp
+          activePage={activePage}
+          editingInvoice={draftInvoice as Invoice | null}
+          handleNavigate={handleNavigate}
+          handleEditInvoice={handleEditInvoice}
+          setEditingInvoice={setDraftInvoice as (invoice: Invoice | null) => void}
+        />
+      )}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        initialIsLogin={authModalTab === 'login'}
+      />
+    </>
   );
 };
 

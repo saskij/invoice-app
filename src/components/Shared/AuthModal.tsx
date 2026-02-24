@@ -96,13 +96,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in"
+            style={{
+                zIndex: 999999,
+                display: 'grid',
+                placeItems: 'center'
+            }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
         >
             <div
                 className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+                style={{
+                    margin: 'auto',
+                    position: 'relative'
+                }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Decorative Gradient */}

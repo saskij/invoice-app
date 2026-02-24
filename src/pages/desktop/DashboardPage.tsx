@@ -1,7 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { AuthModal } from '../../components/Shared/AuthModal';
 import {
     FileText,
     DollarSign,
@@ -25,8 +24,7 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     const { dashboardData, settings, invoices, loading } = useApp();
-    const { user } = useAuth();
-    const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+    const { user, openAuthModal } = useAuth();
 
     if (loading) {
         return (
@@ -101,7 +99,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                                 ))}
                             </ul>
                             <button
-                                onClick={() => setIsAuthModalOpen(true)}
+                                onClick={() => openAuthModal('signup')}
                                 className="btn-secondary"
                                 style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
                             >
@@ -153,7 +151,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                                     <Gift size={14} /> Annual Deal: $220/year (1 Month Free)
                                 </div>
                                 <button
-                                    onClick={() => setIsAuthModalOpen(true)}
+                                    onClick={() => openAuthModal('signup')}
                                     className="btn-primary"
                                     style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
                                 >
@@ -168,7 +166,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     No credit card required for the free version. Cancel Pro anytime.
                 </p>
 
-                <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
             </div>
         );
     }

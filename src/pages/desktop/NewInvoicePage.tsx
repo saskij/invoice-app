@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
 import InvoicePreviewModal from '../../components/Invoice/InvoicePreviewModal';
-import { AuthModal } from '../../components/Shared/AuthModal';
 import { UpgradeModal } from '../../components/Shared/UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
 import { Layout, Palette, ShoppingCart, Globe, ShieldCheck } from 'lucide-react';
@@ -79,7 +78,7 @@ const emptyClient: Client = { id: '', name: '', email: '', company: '', address:
 
 const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved }) => {
     const { settings, catalog, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient, profile } = useApp();
-    const { user } = useAuth();
+    const { user, openAuthModal } = useAuth();
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -109,7 +108,6 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [sending, setSending] = useState(false);
     const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
 
-    const [showAuthModal, setShowAuthModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     const isLimitReached = !editInvoice && profile?.plan === 'free' && (profile?.invoices_sent_count >= profile?.invoice_limit);
@@ -252,7 +250,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     ]);
 
     const handleSave = async (newStatus: Invoice['status'] = status) => {
-        if (!user) { setShowAuthModal(true); return; }
+        if (!user) { openAuthModal('login'); return; }
         if (isLimitReached) { setShowUpgradeModal(true); return; }
         if (!selectedClientId) { toast.error('Please select a client.'); return; }
         if (lineItems.length === 0) { toast.error('Add at least one item.'); return; }
@@ -280,7 +278,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     };
 
     const handleSendEmail = async () => {
-        if (!user) { setShowAuthModal(true); return; }
+        if (!user) { openAuthModal('login'); return; }
         if (isLimitReached) { setShowUpgradeModal(true); return; }
 
         let recipientEmail = activeClient.email || '';
@@ -360,7 +358,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                         </div>
                     </div>
                     <button
-                        onClick={() => setShowAuthModal(true)}
+                        onClick={() => openAuthModal('signup')}
                         className="btn-primary"
                         style={{ padding: '10px 20px', whiteSpace: 'nowrap' }}
                     >
@@ -677,12 +675,6 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                 />
             )}
 
-            <AuthModal
-                isOpen={showAuthModal}
-                onClose={() => setShowAuthModal(false)}
-                title="Save & Send like a Pro"
-                subtitle="Join 1,000+ businesses and manage your invoices with ease."
-            />
 
             <UpgradeModal
                 isOpen={showUpgradeModal}
