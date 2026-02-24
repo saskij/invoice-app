@@ -239,7 +239,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Initial Fetch
     useEffect(() => {
-        if (!user) { setLoading(false); return; }
+        if (!user) {
+            setLoading(false);
+            setProfile(null);
+            setInvoices([]);
+            setClients([]);
+            setDashboardData(null);
+            return;
+        }
         const init = async () => {
             setLoading(true);
             try {
