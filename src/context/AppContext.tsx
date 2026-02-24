@@ -298,9 +298,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saveInvoice = useCallback(async (invoice: Invoice) => {
         if (!user) return;
         const isNew = !invoices.find(i => i.id === invoice.id);
-        console.log('[AC] Attempting to save invoice:', invoice);
+
+        // Sanitize payload: Remove virtual fields and obsolete 'client' column
+        // only keep what belongs in the physical 'invoices' table
+        const {
+            client, clientName, clientCompany, clientEmail, clientPhone, clientAddress,
+            clientCity, clientState, clientZip, balanceDue, displayStatus,
+            ...dbPayload
+        } = invoice as any;
+
+        console.log('[AC] Attempting to save sanitized invoice:', dbPayload);
+
         try {
-            const { error } = await supabase.from('invoices').upsert({ ...invoice, user_id: user.id, updatedAt: new Date().toISOString() });
+            const { error } = await supabase.from('invoices').upsert({
+                ...dbPayload,
+                user_id: user.id,
+                updatedAt: new Date().toISOString()
+            });
+
             if (error) {
                 console.error('[AC] Supabase Upsert Error:', error);
                 throw error;
