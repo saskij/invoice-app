@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
+import { generatePaymentLink as stripeGeneratePaymentLink } from '../utils/stripeService';
 
 const DEFAULT_SETTINGS: AppSettings = {
     company: {
@@ -80,6 +81,7 @@ interface AppContextType {
     setStatusFilter: (s: string) => void;
     fetchPage: (page: number, search?: string, status?: string) => Promise<void>;
     recordPayment: (invoice_id: string, amount: number, notes?: string, newIssueDate?: string, newDueDate?: string) => Promise<void>;
+    generatePaymentLink: (invoiceId: string) => Promise<string | null>;
     dashboardData: DashboardData | null;
     fetchDashboardData: () => Promise<void>;
     profile: any | null;
@@ -466,6 +468,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await Promise.all([fetchDashboardData(), fetchPage(currentPage)]);
     }, [user, fetchPage, currentPage, fetchDashboardData]);
 
+    const generatePaymentLink = useCallback(async (invoiceId: string): Promise<string | null> => {
+        if (!user) return null;
+        try {
+            const url = await stripeGeneratePaymentLink(invoiceId);
+            toast.success('Payment link generated!');
+            await fetchPage(currentPage);
+            return url;
+        } catch (err: any) {
+            console.error('[AC] generatePaymentLink error:', err);
+            toast.error(err.message || 'Failed to generate payment link');
+            return null;
+        }
+    }, [user, currentPage, fetchPage]);
+
     const saveClient = useCallback(async (client: Client): Promise<string | null> => {
         if (!user) return null;
         try {
@@ -524,7 +540,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             settings, updateSettings,
             catalog, addCatalogItem, updateCatalogItem, removeCatalogItem,
             invoices, saveInvoice, deleteInvoice, hardDeleteInvoice, restoreInvoice,
-            reserveNextInvoiceNumber, duplicateInvoice, recordPayment,
+            reserveNextInvoiceNumber, duplicateInvoice, recordPayment, generatePaymentLink,
             clients, saveClient, deleteClient, fetchClients,
             uploadCompanyLogo,
             draftInvoice, setDraftInvoice,

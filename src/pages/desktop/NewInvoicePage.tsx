@@ -87,7 +87,7 @@ interface NewInvoicePageProps {
 const emptyClient: Client = { id: '', name: '', email: '', company: '', address: '', city: '', state: '', zip: '', phone: '' };
 
 const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved }) => {
-    const { settings, catalog, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient, profile } = useApp();
+    const { settings, catalog, saveInvoice, reserveNextInvoiceNumber, draftInvoice, setDraftInvoice, clients, saveClient, profile, generatePaymentLink } = useApp();
     const { user, openAuthModal } = useAuth();
 
     const today = new Date().toISOString().split('T')[0];
@@ -117,6 +117,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [paymentLink, setPaymentLink] = useState(initialData?.paymentLink || '');
     const [showPreview, setShowPreview] = useState(false);
     const [sending, setSending] = useState(false);
+    const [generatingLink, setGeneratingLink] = useState(false);
     const [status] = useState(initialData?.status || 'draft' as Invoice['status']);
 
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -264,6 +265,42 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
         setDraftInvoice
     ]);
 
+    const handleGenerateLink = async (): Promise<string | null> => {
+        if (!user) { openAuthModal('login'); return null; }
+        if (!selectedClientId) { toast.error('Please select a client to generate a payment link.'); return null; }
+        if (lineItems.length === 0) { toast.error('Add at least one item to generate a payment link.'); return null; }
+
+        setGeneratingLink(true);
+        try {
+            let activeInvoiceNumber = invoiceNumber;
+            if (!editInvoice && !activeInvoiceNumber) {
+                const reserved = await reserveNextInvoiceNumber();
+                if (!reserved) return null;
+                activeInvoiceNumber = reserved;
+                setInvoiceNumber(reserved);
+            }
+
+            // Save the draft first so the edge function can read the invoice
+            const invoiceToSave = { ...buildInvoice(), invoiceNumber: activeInvoiceNumber, status: 'draft' as Invoice['status'] };
+            await saveInvoice(invoiceToSave);
+
+            // Generate the link
+            const url = await generatePaymentLink(invoiceId);
+            if (url) {
+                setPaymentLink(url);
+                toast.success('Payment link generated!');
+                return url;
+            }
+            return null;
+        } catch (error) {
+            console.error('[NI] Error generating link:', error);
+            // toast error is already handled by generatePaymentLink inside AppContext if it fails
+            return null;
+        } finally {
+            setGeneratingLink(false);
+        }
+    };
+
     const handleSave = async (newStatus: Invoice['status'] = status) => {
         if (!user) { openAuthModal('login'); return; }
         if (isLimitReached) { setShowUpgradeModal(true); return; }
@@ -288,7 +325,19 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
             toast.error('Select client and add items first.');
             return;
         }
-        await downloadInvoicePDF(buildInvoice(), settings.company);
+
+        let currentLink = paymentLink;
+        if (!currentLink) {
+            const generatedUrl = await handleGenerateLink();
+            if (generatedUrl) {
+                currentLink = generatedUrl;
+            } else {
+                if (!window.confirm('Could not generate payment link. Download PDF anyway?')) return;
+            }
+        }
+
+        const invoiceForPdf = { ...buildInvoice(), paymentLink: currentLink };
+        await downloadInvoicePDF(invoiceForPdf, settings.company);
         toast.success('PDF generated!');
     };
 
@@ -304,9 +353,19 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
             recipientEmail = enteredEmail.trim();
         }
 
+        let currentLink = paymentLink;
+        if (!currentLink) {
+            const generatedUrl = await handleGenerateLink();
+            if (generatedUrl) {
+                currentLink = generatedUrl;
+            } else {
+                if (!window.confirm('Could not generate payment link. Send email anyway?')) return;
+            }
+        }
+
         setSending(true);
         try {
-            const currentInvoice = buildInvoice();
+            const currentInvoice = { ...buildInvoice(), paymentLink: currentLink };
             const pdfBase64 = await getInvoicePDFBase64(currentInvoice, settings.company);
             await sendInvoiceEmail({
                 invoice: { ...currentInvoice, clientEmail: recipientEmail },
@@ -649,13 +708,24 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 <label style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Payment Link / Subscription</label>
-                                <input
-                                    className="input-field"
-                                    style={{ fontSize: 12, height: 32 }}
-                                    value={paymentLink}
-                                    onChange={e => setPaymentLink(e.target.value)}
-                                    placeholder="https://buy.stripe.com/..."
-                                />
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <input
+                                        className="input-field"
+                                        style={{ fontSize: 12, height: 32, flex: 1 }}
+                                        value={paymentLink}
+                                        onChange={e => setPaymentLink(e.target.value)}
+                                        placeholder="https://buy.stripe.com/..."
+                                    />
+                                    <button
+                                        className="btn-secondary"
+                                        style={{ height: 32, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6 }}
+                                        onClick={handleGenerateLink}
+                                        disabled={generatingLink || !selectedClientId || lineItems.length === 0}
+                                        title="Auto-generate Stripe Payment Link"
+                                    >
+                                        {generatingLink ? <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : <Zap size={14} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10, alignItems: 'center' }}>

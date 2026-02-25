@@ -98,6 +98,12 @@ export interface Invoice {
     paymentDate?: string;
     balanceDue?: number;
     paymentLink?: string;
+    // Stripe payment fields
+    stripeSessionId?: string;
+    stripeCheckoutUrl?: string;
+    stripePaymentIntentId?: string;
+    amountPaidCents?: number;
+    paidAt?: string;
     displayStatus?: InvoiceStatus;
     client_id?: string;
     clientName?: string;

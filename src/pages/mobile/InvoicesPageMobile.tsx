@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw, Copy, DollarSign } from 'lucide-react';
+import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw, Copy, DollarSign, Link2, ExternalLink } from 'lucide-react';
 import type { Invoice } from '../../types';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -15,7 +15,7 @@ const STATUS_OPTS = ['all', 'draft', 'sent', 'paid', 'overdue', 'deleted'] as co
 
 const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
     const {
-        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, duplicateInvoice, recordPayment, settings,
+        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, duplicateInvoice, recordPayment, generatePaymentLink, settings,
         currentPage, totalCount, pageSize, fetchPage,
         searchQuery, setSearchQuery, statusFilter, setStatusFilter
     } = useApp();
@@ -27,6 +27,7 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
     const [paymentIssueDate, setPaymentIssueDate] = useState<string>('');
     const [paymentDueDate, setPaymentDueDate] = useState<string>('');
     const [localSearch, setLocalSearch] = useState(searchQuery);
+    const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
     // Search Debouncing
     useEffect(() => {
@@ -71,6 +72,20 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
             toast.error(err.message ? `[IM-E] ${err.message}` : '[IM-E] Email failed. Please check console.');
         } finally {
             setSending(null);
+        }
+    };
+
+    const handleGeneratePaymentLink = async (inv: Invoice) => {
+        if (inv.paymentLink) {
+            window.open(inv.paymentLink, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        setGeneratingLink(inv.id);
+        try {
+            const url = await generatePaymentLink(inv.id);
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        } finally {
+            setGeneratingLink(null);
         }
     };
 
@@ -165,6 +180,26 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                                                     }}
                                                     style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#34d399' }}>
                                                     <DollarSign size={16} />
+                                                </button>
+                                            )}
+                                            {inv.status !== 'paid' && inv.total > 0 && (
+                                                <button
+                                                    title={inv.paymentLink ? 'Open Stripe Payment Link' : 'Generate Stripe Payment Link'}
+                                                    onClick={() => handleGeneratePaymentLink(inv)}
+                                                    disabled={generatingLink === inv.id}
+                                                    style={{
+                                                        background: inv.paymentLink ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.1)',
+                                                        border: `1px solid ${inv.paymentLink ? 'rgba(16,185,129,0.35)' : 'rgba(99,102,241,0.2)'}`,
+                                                        borderRadius: 8, padding: '8px', cursor: 'pointer',
+                                                        color: inv.paymentLink ? '#34d399' : '#818cf8',
+                                                        opacity: generatingLink === inv.id ? 0.6 : 1,
+                                                    }}
+                                                >
+                                                    {generatingLink === inv.id
+                                                        ? <span style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                                                        : inv.paymentLink
+                                                        ? <ExternalLink size={16} />
+                                                        : <Link2 size={16} />}
                                                 </button>
                                             )}
                                             <button title="Duplicate" onClick={() => duplicateInvoice(inv)} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#818cf8' }}>
