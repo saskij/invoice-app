@@ -100,6 +100,15 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
     const [invoiceId] = useState(initialData?.id || uuidv4());
     const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || '');
 
+    // Автоматически подставляем следующий номер для нового инвойса
+    useEffect(() => {
+        if (!editInvoice && !initialData?.invoiceNumber && !invoiceNumber) {
+            const prefix = settings.invoicePrefix || 'INV-';
+            const nextNum = String(settings.nextInvoiceNumber || 1001).padStart(4, '0');
+            setInvoiceNumber(prefix + nextNum);
+        }
+    }, [editInvoice, initialData, invoiceNumber, settings.invoicePrefix, settings.nextInvoiceNumber]);
+
     // Client selection
     const [selectedClientId, setSelectedClientId] = useState<string>(initialData?.client_id || '');
     const [tempClient, setTempClient] = useState<Client>(emptyClient);
@@ -471,7 +480,7 @@ const NewInvoicePageMobile: React.FC<NewInvoicePageMobileProps> = ({ editInvoice
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                         <label className="label">Invoice #</label>
-                        <input className="input-field" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Auto-generated" />
+                        <input className="input-field cursor-not-allowed opacity-70" value={invoiceNumber} readOnly placeholder="Auto-generated" />
                     </div>
                     <div>
                         <label className="label">Issue Date</label>

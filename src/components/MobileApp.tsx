@@ -6,6 +6,8 @@ import DashboardPageMobile from '../pages/mobile/DashboardPageMobile';
 import NewInvoicePageMobile from '../pages/mobile/NewInvoicePageMobile';
 import InvoicesPageMobile from '../pages/mobile/InvoicesPageMobile';
 import SettingsPageMobile from '../pages/mobile/SettingsPageMobile';
+import CatalogPageMobile from '../pages/mobile/CatalogPageMobile';
+import ClientsPage from '../pages/desktop/ClientsPage';
 import type { Invoice } from '../types';
 
 type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog';
@@ -47,8 +49,8 @@ const MobileApp: React.FC<MobileAppProps> = ({
                 )}
                 {activePage === 'invoices' && <InvoicesPageMobile onEdit={handleEditInvoice} />}
                 {activePage === 'settings' && <SettingsPageMobile />}
-                {activePage === 'clients' && <div style={{ padding: 40, color: '#94a3b8' }}>Clients management coming soon...</div>}
-                {activePage === 'catalog' && <div style={{ padding: 40, color: '#94a3b8' }}>Catalog management coming soon...</div>}
+                {activePage === 'clients' && <ClientsPage />}
+                {activePage === 'catalog' && <CatalogPageMobile />}
             </main>
             <MobileBottomNav activePage={activePage} onNavigate={handleNavigate} />
         </div>

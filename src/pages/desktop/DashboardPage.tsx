@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -16,15 +16,56 @@ import {
     Zap,
     Gift,
     Layout,
+    X,
+    Settings,
+    ChevronRight,
 } from 'lucide-react';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts';
 
 interface DashboardPageProps {
     onNavigate: (page: string) => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
-    const { dashboardData, settings, invoices, loading } = useApp();
+    const { dashboardData, settings, invoices, loading, clients } = useApp();
     const { user, openAuthModal } = useAuth();
+    const [settingsBannerDismissed, setSettingsBannerDismissed] = useState(false);
+
+    // Build monthly chart data from invoices (last 6 months)
+    // ВАЖНО: useMemo должен быть до всех early returns (Rules of Hooks)
+    const recentInvoicesList = (dashboardData as any)?.recentInvoices || [];
+    const chartData = useMemo(() => {
+        const months: { label: string; key: string; revenue: number; pending: number }[] = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({
+                key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+                revenue: 0,
+                pending: 0,
+            });
+        }
+        recentInvoicesList.forEach((inv: any) => {
+            const dateStr = inv.issueDate || inv.createdAt;
+            if (!dateStr) return;
+            const d = new Date(dateStr);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const month = months.find(m => m.key === key);
+            if (!month) return;
+            if (inv.displayStatus === 'paid') month.revenue += inv.total || 0;
+            else if (inv.displayStatus === 'sent' || inv.displayStatus === 'overdue') month.pending += inv.total || 0;
+        });
+        return months;
+    }, [recentInvoicesList]);
 
     if (loading) {
         return (
@@ -190,6 +231,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     const { totalRevenue, pendingAmount, overdueAmount, paidCount, recentInvoices } = dashboardData;
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+    const fmtShort = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n}`;
 
     const stats = [
         { label: 'Total Revenue', value: fmt(totalRevenue), icon: DollarSign, color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
@@ -200,6 +242,89 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
     return (
         <div className="animate-fade-in" style={{ padding: 28 }}>
+            {/* Баннер: Заполните данные компании — закрываемый */}
+            {user && !settings.company.name && !settingsBannerDismissed && (
+                <div style={{
+                    background: 'rgba(245,158,11,0.08)',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                    borderRadius: 14,
+                    padding: '14px 20px',
+                    marginBottom: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                }}>
+                    <AlertCircle size={18} color="#f59e0b" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: 13, color: '#fbbf24' }}>
+                        <strong>Set up your company info</strong>{' '}
+                        <span style={{ color: '#94a3b8' }}>to display your brand on every invoice.</span>
+                    </div>
+                    <button
+                        onClick={() => onNavigate('settings')}
+                        style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '6px 14px', color: '#fbbf24', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+                    >
+                        <Settings size={13} /> Go to Settings <ChevronRight size={12} />
+                    </button>
+                    <button
+                        onClick={() => setSettingsBannerDismissed(true)}
+                        title="Dismiss"
+                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            {/* Онбординг-чеклист (только пока все 3 шага не выполнены) */}
+            {user && (() => {
+                const hasCompany = !!settings.company.name;
+                const hasClients = clients.length > 0;
+                const hasInvoices = invoices.length > 0;
+                if (hasCompany && hasClients && hasInvoices) return null;
+                const steps = [
+                    { done: hasCompany, label: 'Fill in your company info', action: () => onNavigate('settings'), icon: Settings },
+                    { done: hasClients, label: 'Add your first client', action: () => onNavigate('clients'), icon: Users },
+                    { done: hasInvoices, label: 'Create your first invoice', action: () => onNavigate('new-invoice'), icon: FilePlus },
+                ];
+                const doneCount = steps.filter(s => s.done).length;
+                return (
+                    <div className="glass-card" style={{ padding: 20, marginBottom: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Zap size={15} color="#818cf8" />
+                                <span style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}>Getting Started</span>
+                                <span style={{ fontSize: 12, color: '#64748b' }}>{doneCount}/3 complete</span>
+                            </div>
+                            <div style={{ width: 100, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div style={{ width: `${(doneCount / 3) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: 2, transition: 'width 0.5s' }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {steps.map((step, i) => {
+                                const Icon = step.icon;
+                                return (
+                                    <div
+                                        key={i}
+                                        onClick={step.done ? undefined : step.action}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: step.done ? 'rgba(16,185,129,0.04)' : 'rgba(99,102,241,0.05)', border: `1px solid ${step.done ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)'}`, cursor: step.done ? 'default' : 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: step.done ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {step.done
+                                                ? <CheckCircle size={14} color="#10b981" />
+                                                : <Icon size={13} color="#818cf8" />}
+                                        </div>
+                                        <span style={{ fontSize: 13, color: step.done ? '#64748b' : '#e2e8f0', fontWeight: step.done ? 400 : 600, textDecoration: step.done ? 'line-through' : 'none' }}>
+                                            {step.label}
+                                        </span>
+                                        {!step.done && <ChevronRight size={14} color="#64748b" style={{ marginLeft: 'auto' }} />}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Welcome banner */}
             <div className="glass-card" style={{
                 padding: '24px 32px',
@@ -242,6 +367,89 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 })}
             </div>
 
+            {/* Revenue Chart */}
+            <div className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 28 }}>
+                <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <BarChart3 size={16} color="#4f46e5" />
+                        <span style={{ fontWeight: 700, fontSize: 15, color: '#e2e8f0' }}>Revenue Trend</span>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>— last 6 months</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: 2, background: '#6366f1' }} />
+                            <span style={{ fontSize: 12, color: '#64748b' }}>Revenue</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: 2, background: '#f59e0b' }} />
+                            <span style={{ fontSize: 12, color: '#64748b' }}>Pending</span>
+                        </div>
+                    </div>
+                </div>
+                <div style={{ padding: '24px 16px 16px' }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorPending" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
+                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.08)" />
+                            <XAxis
+                                dataKey="label"
+                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <YAxis
+                                tickFormatter={fmtShort}
+                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={52}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    background: '#1e293b',
+                                    border: '1px solid rgba(99,102,241,0.25)',
+                                    borderRadius: 10,
+                                    fontSize: 13,
+                                    color: '#e2e8f0',
+                                }}
+                                formatter={((value: number | undefined, name: string | undefined) => [
+                                    fmt(value ?? 0),
+                                    name === 'revenue' ? 'Revenue (Paid)' : 'Pending'
+                                ]) as any}
+                                labelStyle={{ color: '#94a3b8', marginBottom: 4 }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="revenue"
+                                stroke="#6366f1"
+                                strokeWidth={2}
+                                fill="url(#colorRevenue)"
+                                dot={{ fill: '#6366f1', r: 3, strokeWidth: 0 }}
+                                activeDot={{ r: 5, fill: '#818cf8' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="pending"
+                                stroke="#f59e0b"
+                                strokeWidth={2}
+                                fill="url(#colorPending)"
+                                dot={{ fill: '#f59e0b', r: 3, strokeWidth: 0 }}
+                                activeDot={{ r: 5, fill: '#fbbf24' }}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
             {/* Recent Invoices */}
             <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -261,7 +469,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                         <thead>
                             <tr style={{ background: 'rgba(15,23,42,0.5)' }}>
                                 {['Invoice #', 'Client', 'Amount', 'Due Date', 'Status'].map(h => (
-                                    <th key={h} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
+                                    <th key={h} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -271,12 +479,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                                     <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#818cf8' }}>#{inv.invoiceNumber}</td>
                                     <td style={{ padding: '14px 20px', fontSize: 13, color: '#e2e8f0' }}>
                                         <div style={{ fontWeight: 600 }}>{inv.clientName}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.clientCompany}</div>
+                                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{inv.clientCompany}</div>
                                     </td>
                                     <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>
                                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.total)}
                                     </td>
-                                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>
+                                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#cbd5e1' }}>
                                         {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                                     </td>
                                     <td style={{ padding: '14px 20px' }}>

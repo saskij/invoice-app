@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw, Copy, DollarSign, Link2, ExternalLink } from 'lucide-react';
+import { Eye, Download, Trash2, Send, Edit2, Search, RotateCcw, Copy, DollarSign, Link2, ExternalLink, FileText, FilePlus, Filter } from 'lucide-react';
 import type { Invoice } from '../../types';
 import { downloadInvoicePDF, getInvoicePDFBase64 } from '../../utils/pdfGenerator';
 import { sendInvoiceEmail } from '../../utils/emailSender';
@@ -15,10 +15,13 @@ const STATUS_OPTS = ['all', 'draft', 'sent', 'paid', 'overdue', 'deleted'] as co
 
 const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
     const {
-        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, duplicateInvoice, recordPayment, generatePaymentLink, settings,
+        invoices, deleteInvoice, hardDeleteInvoice, restoreInvoice, saveInvoice, duplicateInvoice, recordPayment, generatePaymentLink, settings, clients,
         currentPage, totalCount, pageSize, fetchPage,
         searchQuery, setSearchQuery, statusFilter, setStatusFilter
     } = useApp();
+    const [clientFilter, setClientFilter] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [previewInv, setPreviewInv] = useState<Invoice | null>(null);
     const [sending, setSending] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -47,6 +50,21 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
     };
 
     const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
+    // Фильтр по клиенту и датам (на клиенте, поверх серверных данных)
+    const displayInvoices = invoices.filter(inv => {
+        // Запрос по клиенту
+        const matchesClient = clientFilter
+            ? inv.client_id === clientFilter || inv.clientName?.toLowerCase().includes((clients.find(c => c.id === clientFilter)?.name || '').toLowerCase())
+            : true;
+
+        // Запрос по дате
+        const invDate = inv.issueDate || inv.createdAt;
+        const matchesStartDate = startDate ? (invDate ? invDate >= startDate : false) : true;
+        const matchesEndDate = endDate ? (invDate ? invDate <= endDate : false) : true;
+
+        return matchesClient && matchesStartDate && matchesEndDate;
+    });
 
     const handleSendEmail = async (inv: Invoice) => {
         let recipientEmail = inv.clientEmail || inv.client?.email || '';
@@ -103,6 +121,21 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                         onChange={e => setLocalSearch(e.target.value)}
                     />
                 </div>
+                {/* Фильтр по клиенту */}
+                {clients.length > 0 && (
+                    <select
+                        className="input-field"
+                        style={{ minWidth: 160, height: 38, paddingRight: 32 }}
+                        value={clientFilter}
+                        onChange={e => setClientFilter(e.target.value)}
+                        title="Filter by client"
+                    >
+                        <option value="">All Clients</option>
+                        {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ''}</option>
+                        ))}
+                    </select>
+                )}
                 <div style={{ display: 'flex', gap: 6 }}>
                     {STATUS_OPTS.map(s => (
                         <button
@@ -121,28 +154,99 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                 </div>
             </div>
 
+            {/* Дополнительные фильтры (даты) */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 24, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15, 23, 42, 0.4)', padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Date Range:</span>
+                    <input
+                        type="date"
+                        className="input-field"
+                        style={{ background: 'transparent', border: 'none', padding: '0 4px', fontSize: 13, height: 26, width: 125 }}
+                        value={startDate}
+                        onChange={e => setStartDate(e.target.value)}
+                        title="Start Date"
+                    />
+                    <span style={{ color: '#64748b' }}>-</span>
+                    <input
+                        type="date"
+                        className="input-field"
+                        style={{ background: 'transparent', border: 'none', padding: '0 4px', fontSize: 13, height: 26, width: 125 }}
+                        value={endDate}
+                        onChange={e => setEndDate(e.target.value)}
+                        title="End Date"
+                    />
+                    {(startDate || endDate) && (
+                        <button
+                            onClick={() => { setStartDate(''); setEndDate(''); }}
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: 4, display: 'flex' }}
+                            title="Clear Dates"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Table */}
             <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                {invoices.length === 0 ? (
-                    <div style={{ padding: 60, textAlign: 'center', color: '#475569', fontSize: 14 }}>
-                        No invoices found.
+                {displayInvoices.length === 0 ? (
+                    <div style={{ padding: '72px 40px', textAlign: 'center' }}>
+                        <div style={{
+                            width: 72, height: 72, borderRadius: 20,
+                            background: statusFilter !== 'all' ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.1)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 20px',
+                        }}>
+                            {statusFilter !== 'all' || localSearch
+                                ? <Filter size={30} color="#6366f1" />
+                                : <FileText size={30} color="#6366f1" />}
+                        </div>
+                        <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>
+                            {localSearch
+                                ? 'No invoices match your search'
+                                : statusFilter !== 'all'
+                                    ? `No ${statusFilter} invoices`
+                                    : 'No invoices yet'}
+                        </h3>
+                        <p style={{ color: '#64748b', fontSize: 14, maxWidth: 380, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                            {localSearch || statusFilter !== 'all' || startDate || endDate || clientFilter
+                                ? 'Try adjusting your search or filters to find what you\'re looking for.'
+                                : 'Create your first invoice and start getting paid faster.'}
+                        </p>
+                        {!localSearch && statusFilter === 'all' && !startDate && !endDate && !clientFilter ? (
+                            <button
+                                className="btn-primary"
+                                onClick={() => { /* navigate handled by parent */ window.dispatchEvent(new CustomEvent('navigate', { detail: 'new-invoice' })); }}
+                                style={{ margin: '0 auto' }}
+                            >
+                                <FilePlus size={16} /> Create First Invoice
+                            </button>
+                        ) : (
+                            <button
+                                className="btn-secondary"
+                                onClick={() => { setLocalSearch(''); setSearchQuery(''); handleFilterChange('all'); setStartDate(''); setEndDate(''); setClientFilter(''); }}
+                                style={{ margin: '0 auto' }}
+                            >
+                                Clear Filters
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ background: 'rgba(15,23,42,0.6)' }}>
-                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invoice #</th>
-                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Client</th>
-                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Issue Date</th>
-                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Due Date</th>
-                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</th>
-                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</th>
-                                <th style={{ textAlign: 'center', padding: '12px 16px', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Actions</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invoice #</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Client</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Issue Date</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Due Date</th>
+                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#94a3b8', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</th>
+                                <th style={{ textAlign: 'right', padding: '12px 16px', color: '#94a3b8', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</th>
+                                <th style={{ textAlign: 'center', padding: '12px 16px', color: '#94a3b8', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                                <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {invoices.map((inv, i) => (
+                            {displayInvoices.map((inv, i) => (
                                 <tr key={inv.id} style={{ borderTop: '1px solid rgba(99,102,241,0.08)', background: i % 2 ? 'rgba(15,23,42,0.25)' : 'transparent', transition: 'background 0.15s' }}
                                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(79,70,229,0.07)')}
                                     onMouseLeave={e => (e.currentTarget.style.background = i % 2 ? 'rgba(15,23,42,0.25)' : 'transparent')}
@@ -150,18 +254,43 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                     <td style={{ padding: '14px 18px', fontWeight: 700, color: '#818cf8', fontSize: 13 }}>#{inv.invoiceNumber}</td>
                                     <td style={{ padding: '14px 18px' }}>
                                         <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{inv.clientName || inv.client?.name}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b' }}>{inv.clientCompany || inv.client?.company}</div>
+                                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{inv.clientCompany || inv.client?.company}</div>
                                     </td>
-                                    <td style={{ padding: '14px 18px', fontSize: 12, color: '#94a3b8' }}>
+                                    <td style={{ padding: '14px 18px', fontSize: 12, color: '#cbd5e1' }}>
                                         {inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                                     </td>
-                                    <td style={{ padding: '14px 18px', fontSize: 12, color: '#94a3b8' }}>
+                                    <td style={{ padding: '14px 18px', fontSize: 12, color: '#cbd5e1' }}>
                                         {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                                     </td>
                                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#e2e8f0' }}>{fmt(inv.total)}</td>
                                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: (inv.balanceDue || 0) > 0 ? '#f87171' : '#34d399' }}>{fmt(inv.balanceDue ?? inv.total)}</td>
                                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                        <span className={`badge badge-${inv.displayStatus || inv.status}`}>{inv.displayStatus || inv.status}</span>
+                                        {inv.status !== 'deleted' ? (
+                                            <select
+                                                value={inv.status}
+                                                onChange={(e) => {
+                                                    const newStatus = e.target.value as Invoice['status'];
+                                                    saveInvoice({ ...inv, status: newStatus });
+                                                    toast.success(`Status updated to ${newStatus}`);
+                                                }}
+                                                className={`badge badge-${inv.status}`}
+                                                style={{
+                                                    appearance: 'none',
+                                                    cursor: 'pointer',
+                                                    border: '1px solid transparent',
+                                                    outline: 'none',
+                                                    paddingRight: '12px',
+                                                    textTransform: 'capitalize',
+                                                }}
+                                                title="Change Status"
+                                            >
+                                                {STATUS_OPTS.filter(s => s !== 'all' && s !== 'deleted').map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <span className={`badge badge-${inv.displayStatus || inv.status}`}>{inv.displayStatus || inv.status}</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '14px 18px' }}>
                                         <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
@@ -228,8 +357,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ onEdit }) => {
                                                             {generatingLink === inv.id
                                                                 ? <span style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
                                                                 : inv.paymentLink
-                                                                ? <ExternalLink size={14} />
-                                                                : <Link2 size={14} />}
+                                                                    ? <ExternalLink size={14} />
+                                                                    : <Link2 size={14} />}
                                                         </button>
                                                     )}
                                                 </>

@@ -28,11 +28,11 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
 
         // ── Header Band ──────────────────────────────────────────────────────
         doc.setFillColor(...DARK_COLOR);
-        doc.rect(0, 0, pageWidth, 120, 'F');
+        doc.rect(0, 0, pageWidth, 150, 'F');
 
         // Accent stripe
         doc.setFillColor(...BRAND_COLOR);
-        doc.rect(0, 118, pageWidth, 4, 'F');
+        doc.rect(0, 146, pageWidth, 4, 'F');
 
         let textStartX = margin;
         const logoUrl = company.logoUrl;
@@ -67,7 +67,7 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
                         logoHeight = (imgProps.height * logoWidth) / imgProps.width;
                     }
 
-                    doc.addImage(imgData, fileType === 'JPG' ? 'JPEG' : fileType, margin, 34 + (maxLogoHeight - logoHeight) / 2, logoWidth, logoHeight);
+                    doc.addImage(imgData, fileType === 'JPG' ? 'JPEG' : fileType, margin, 46 + (maxLogoHeight - logoHeight) / 2, logoWidth, logoHeight);
                     textStartX = margin + logoWidth + 20;
                 }
             } catch (e) {
@@ -80,7 +80,7 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
-        doc.text(sanitizeInput(company.name) || 'Your Company', textStartX, 52);
+        doc.text(sanitizeInput(company.name) || 'Your Company', textStartX, 66);
 
         // Company contact
         doc.setFont('helvetica', 'normal');
@@ -93,23 +93,18 @@ export async function generateInvoicePDF(invoice: Invoice, company: CompanyInfo)
         if (company.phone) companyLines.push(sanitizeInput(company.phone));
         if (company.email) companyLines.push(sanitizeInput(company.email));
         if (company.website) companyLines.push(sanitizeInput(company.website));
-        doc.text(companyLines.join('  |  '), textStartX, 72);
+        doc.text(companyLines.join('  |  '), textStartX, 86);
         if (company.taxId) {
-            doc.text(`Tax ID: ${sanitizeInput(company.taxId)}`, textStartX, 86);
+            doc.text(`Tax ID: ${sanitizeInput(company.taxId)}`, textStartX, 100);
         }
 
         // INVOICE label (top right)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(32);
         doc.setTextColor(79, 70, 229);
-        doc.text('INVOICE', pageWidth - margin, 52, { align: 'right' });
+        doc.text('INVOICE', pageWidth - margin, 66, { align: 'right' });
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`#${sanitizeInput(invoice.invoiceNumber)}`, pageWidth - margin, 68, { align: 'right' });
-
-        y = 140;
+        y = 175;
 
         // ── Invoice Meta + Bill To ────────────────────────────────────────────
         const halfW = contentWidth / 2 - 12;

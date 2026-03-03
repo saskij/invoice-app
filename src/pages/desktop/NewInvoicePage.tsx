@@ -99,6 +99,16 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [invoiceId] = useState(initialData?.id || uuidv4());
     const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber || '');
 
+    // Автоматически подставляем следующий номер для нового инвойса
+    useEffect(() => {
+        if (!editInvoice && !initialData?.invoiceNumber && !invoiceNumber) {
+            const prefix = settings.invoicePrefix || 'INV-';
+            const nextNum = String(settings.nextInvoiceNumber || 1001).padStart(4, '0');
+            setInvoiceNumber(prefix + nextNum);
+        }
+    }, [editInvoice, initialData, invoiceNumber, settings.invoicePrefix, settings.nextInvoiceNumber]);
+
+
     // Client selection state
     const [selectedClientId, setSelectedClientId] = useState<string>(initialData?.client_id || '');
     // Temp client state if creating new inline
@@ -108,6 +118,23 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
     const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems || []);
     const [issueDate, setIssueDate] = useState(initialData?.issueDate || today);
     const [dueDate, setDueDate] = useState(initialData?.dueDate || thirtyDays);
+
+    // Авто-расчёт Due Date при изменении Issue Date (только для новых счётов)
+    const calcDueDateFromTerms = (issueDateStr: string): string => {
+        const terms = paymentTerms || settings.defaultPaymentTerms || '';
+        const match = terms.match(/(\d+)/);
+        const days = match ? parseInt(match[1]) : 30;
+        const d = new Date(issueDateStr);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    };
+
+    const handleIssueDateChange = (val: string) => {
+        setIssueDate(val);
+        if (!editInvoice) {
+            setDueDate(calcDueDateFromTerms(val));
+        }
+    };
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(initialData?.discountType || 'percentage');
     const [discountValue, setDiscountValue] = useState(initialData?.discountValue || 0);
     const [taxRate, setTaxRate] = useState(initialData?.taxRate ?? settings.defaultTaxRate ?? 0);
@@ -566,7 +593,7 @@ const NewInvoicePage: React.FC<NewInvoicePageProps> = ({ editInvoice, onSaved })
                                     className="input-field"
                                     type="date"
                                     value={issueDate}
-                                    onChange={e => setIssueDate(e.target.value)}
+                                    onChange={e => handleIssueDateChange(e.target.value)}
                                 />
                             </div>
                             <div>

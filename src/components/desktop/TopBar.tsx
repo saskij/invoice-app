@@ -8,6 +8,8 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
     'new-invoice': { title: 'New Invoice', subtitle: 'Create a professional invoice for your client' },
     invoices: { title: 'All Invoices', subtitle: 'Manage and track all your invoices' },
     settings: { title: 'Settings', subtitle: 'Configure your company and service catalog' },
+    clients: { title: 'Clients', subtitle: 'Manage your client relationships' },
+    catalog: { title: 'Service Catalog', subtitle: 'Manage your services and pricing' },
 };
 
 interface TopBarProps {

@@ -142,7 +142,31 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                                     <div style={{ fontSize: 12, fontWeight: 600, color: (inv.balanceDue || 0) > 0 ? '#f87171' : '#34d399', marginBottom: 6 }}>
                                         Due: {fmt(inv.balanceDue ?? inv.total)}
                                     </div>
-                                    <span className={`badge badge-${inv.displayStatus || inv.status}`}>{inv.displayStatus || inv.status}</span>
+                                    {inv.status !== 'deleted' ? (
+                                        <select
+                                            value={inv.status}
+                                            onChange={(e) => {
+                                                const newStatus = e.target.value as Invoice['status'];
+                                                saveInvoice({ ...inv, status: newStatus });
+                                                toast.success(`Status updated to ${newStatus}`);
+                                            }}
+                                            className={`badge badge-${inv.status}`}
+                                            style={{
+                                                appearance: 'none',
+                                                cursor: 'pointer',
+                                                border: '1px solid transparent',
+                                                outline: 'none',
+                                                paddingRight: '12px',
+                                                textTransform: 'capitalize',
+                                            }}
+                                        >
+                                            {STATUS_OPTS.filter(s => s !== 'all' && s !== 'deleted').map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <span className={`badge badge-${inv.displayStatus || inv.status}`}>{inv.displayStatus || inv.status}</span>
+                                    )}
                                 </div>
                             </div>
 
@@ -198,8 +222,8 @@ const InvoicesPageMobile: React.FC<InvoicesPageMobileProps> = ({ onEdit }) => {
                                                     {generatingLink === inv.id
                                                         ? <span style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
                                                         : inv.paymentLink
-                                                        ? <ExternalLink size={16} />
-                                                        : <Link2 size={16} />}
+                                                            ? <ExternalLink size={16} />
+                                                            : <Link2 size={16} />}
                                                 </button>
                                             )}
                                             <button title="Duplicate" onClick={() => duplicateInvoice(inv)} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px', cursor: 'pointer', color: '#818cf8' }}>

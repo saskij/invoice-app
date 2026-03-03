@@ -7,6 +7,7 @@ import NewInvoicePage from '../pages/desktop/NewInvoicePage';
 import InvoicesPage from '../pages/desktop/InvoicesPage';
 import SettingsPage from '../pages/desktop/SettingsPage';
 import ClientsPage from '../pages/desktop/ClientsPage';
+import CatalogPage from '../pages/desktop/CatalogPage';
 import type { Invoice } from '../types';
 
 type Page = 'dashboard' | 'new-invoice' | 'invoices' | 'settings' | 'clients' | 'catalog';
@@ -44,7 +45,7 @@ const DesktopApp: React.FC<DesktopAppProps> = ({
                     {activePage === 'invoices' && <InvoicesPage onEdit={handleEditInvoice} />}
                     {activePage === 'settings' && <SettingsPage />}
                     {activePage === 'clients' && <ClientsPage />}
-                    {activePage === 'catalog' && <div style={{ padding: 40, color: '#94a3b8' }}>Catalog management coming soon...</div>}
+                    {activePage === 'catalog' && <CatalogPage />}
                 </main>
             </div>
         </div>
